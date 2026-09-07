@@ -661,3 +661,149 @@ button, select, input {
     padding: 7px 13px;
   }
 }
+
+
+/* =========================================================
+   v25 - top-left control HUD: wider and flatter
+   "소리 테스트 / 셋업"이 있는 박스를 가로형으로 변경
+   PC / 모바일 공통
+   ========================================================= */
+
+.hud {
+  width: 390px !important;
+  max-width: calc(100vw - 28px);
+
+  padding: 8px 10px !important;
+
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto;
+  column-gap: 10px;
+  row-gap: 1px;
+
+  align-items: center;
+}
+
+.hud #currentChord {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+
+  margin: 0 !important;
+  min-height: 0 !important;
+
+  font-size: 24px !important;
+  line-height: 1 !important;
+
+  align-self: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hud #status {
+  grid-column: 2;
+  grid-row: 1;
+
+  margin: 0 !important;
+  min-height: 0 !important;
+
+  font-size: 11px !important;
+  line-height: 1.2;
+}
+
+.hud .engineStatus {
+  grid-column: 2;
+  grid-row: 2;
+
+  margin: 1px 0 0 !important;
+  min-height: 0 !important;
+
+  font-size: 9px !important;
+  line-height: 1.15;
+}
+
+.hud .buttonRow {
+  grid-column: 1 / -1;
+  grid-row: 3;
+
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+
+  gap: 5px !important;
+  margin-top: 5px !important;
+}
+
+.hud .buttonRow button {
+  padding: 6px 9px !important;
+  min-height: 32px;
+
+  font-size: 12px !important;
+  line-height: 1.1;
+
+  white-space: nowrap;
+}
+
+.hud .miniHelp {
+  grid-column: 1 / -1;
+  grid-row: 4;
+
+  margin-top: 3px !important;
+
+  font-size: 10px !important;
+  line-height: 1.15;
+}
+
+/* 모바일도 같은 가로형 구조를 유지하되 화면 폭을 넘지 않게 */
+@media (max-width: 700px) {
+  .hud {
+    width: 330px !important;
+    max-width: calc(100vw - 20px);
+
+    grid-template-columns: 58px minmax(0, 1fr);
+    column-gap: 8px;
+
+    padding: 7px 9px !important;
+    border-radius: 12px !important;
+  }
+
+  .hud #currentChord {
+    font-size: 21px !important;
+  }
+
+  .hud #status {
+    font-size: 10px !important;
+  }
+
+  .hud .engineStatus {
+    font-size: 8.5px !important;
+  }
+
+  .hud .buttonRow button {
+    padding: 6px 8px !important;
+    min-height: 31px;
+    font-size: 11px !important;
+  }
+
+  .hud .miniHelp {
+    font-size: 9.5px !important;
+  }
+}
+
+/* 아주 좁은 폰에서도 버튼이 두 줄로 떨어지지 않도록 조금 더 압축 */
+@media (max-width: 380px) {
+  .hud {
+    width: calc(100vw - 18px) !important;
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .hud .buttonRow {
+    gap: 4px !important;
+  }
+
+  .hud .buttonRow button {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    font-size: 10.5px !important;
+  }
+}
