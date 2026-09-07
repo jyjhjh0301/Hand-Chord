@@ -916,14 +916,16 @@ function wheelGeom(kind) {
 
   if (settings.mode === "basic") {
     if (portrait) {
-      // 세로형 스마트폰: 기존보다 살짝 위로
+      // 세로형 스마트폰:
+      // 아래쪽 코드를 고를 때 손이 화면 밖으로 빠지지 않도록
+      // 두 원 전체를 확실히 위로 올림.
       const outer = Math.min(w * 0.34, h * 0.18);
       const inner = outer * 0.27;
 
       if (kind === "left") {
         return {
           cx: w * 0.50,
-          cy: h * 0.35,
+          cy: h * 0.28,
           outer,
           inner
         };
@@ -931,39 +933,39 @@ function wheelGeom(kind) {
 
       return {
         cx: w * 0.50,
-        cy: h * 0.67,
+        cy: h * 0.56,
         outer,
         inner
       };
     }
 
-    // PC / 가로형 폰: 좌우 배치 + 살짝 위로
+    // PC / 가로형 폰도 약간 더 위로
     const outer = minSide * 0.22;
     const inner = minSide * 0.058;
 
     if (kind==="left") return {
-      cx:w*0.30, cy:h*0.54,
+      cx:w*0.30, cy:h*0.48,
       outer, inner
     };
 
     return {
-      cx:w*0.70, cy:h*0.54,
+      cx:w*0.70, cy:h*0.48,
       outer, inner
     };
   }
 
-  // 사용자 코드 모드도 살짝 위로
+  // 사용자 코드 모드도 더 위로 이동
   if (portrait) {
     const outer = Math.min(w * 0.39, h * 0.22);
     return {
-      cx:w*0.50, cy:h*0.54,
+      cx:w*0.50, cy:h*0.44,
       outer,
       inner:outer*0.24
     };
   }
 
   return {
-    cx:w*0.50, cy:h*0.54,
+    cx:w*0.50, cy:h*0.48,
     outer:minSide*0.27, inner:minSide*0.065
   };
 }
