@@ -157,6 +157,20 @@ function isIOSDevice() {
 }
 
 function performanceProfile() {
+  // 중요:
+  // 모바일 성능 최적화용 저해상도 설정을 PC에 적용하면
+  // 480x360(4:3) 영상이 와이드 화면에 object-fit: cover 되면서
+  // 확대/크롭되어 보인다.
+  // 따라서 PC는 별도의 16:9 카메라 설정을 사용한다.
+  if (!isMobileDevice()) {
+    return {
+      width: 1280,
+      height: 720,
+      cameraFps: 60,
+      inferenceInterval: 16
+    };
+  }
+
   const mode = settings.performance || "fast";
 
   if (mode === "quality") {
@@ -177,7 +191,7 @@ function performanceProfile() {
     };
   }
 
-  // 프레임 우선: 작은 프레임 + 최대 30회/초 추론
+  // 모바일 프레임 우선
   return {
     width: 480,
     height: 360,
@@ -1724,9 +1738,7 @@ function loop(nowMs) {
 
   // 모바일 CPU에서 매 화면 refresh(60~120Hz)마다 추론하면 너무 무거움.
   // 최대 약 30fps, 그리고 실제 새 카메라 프레임이 들어왔을 때만 추론한다.
-  const inferenceInterval = isMobileDevice()
-    ? performanceProfile().inferenceInterval
-    : 16;
+  const inferenceInterval = performanceProfile().inferenceInterval;
   const hasNewFrame = video.currentTime !== lastVideoTime;
 
   if (hasNewFrame && nowMs - lastDetectAt >= inferenceInterval) {
