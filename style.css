@@ -847,3 +847,109 @@ button, select, input {
 video {
   object-fit: cover !important;
 }
+
+
+/* =========================================================
+   v29 - Privacy notice
+   ========================================================= */
+
+.privacyModal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding:
+    calc(18px + var(--safe-top))
+    18px
+    calc(18px + var(--safe-bottom));
+
+  background: rgba(0,0,0,.68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.privacyModal.hidden {
+  display: none !important;
+}
+
+.privacyCard {
+  width: min(520px, 100%);
+  max-height: min(720px, calc(100dvh - 36px));
+
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  padding: 22px;
+
+  color: white;
+  background: rgba(18,18,18,.98);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 18px;
+  box-shadow: 0 24px 90px rgba(0,0,0,.45);
+}
+
+.privacyCard h2 {
+  margin: 0 0 14px;
+  font-size: 22px;
+}
+
+.privacyCard p {
+  margin: 10px 0;
+  line-height: 1.55;
+}
+
+.privacyCard ul {
+  margin: 14px 0;
+  padding-left: 22px;
+}
+
+.privacyCard li {
+  margin: 8px 0;
+  line-height: 1.48;
+}
+
+.privacySmall {
+  margin-top: 16px !important;
+  font-size: 12px;
+  opacity: .72;
+}
+
+.privacyOkBtn {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 16px;
+  font-weight: 800;
+}
+
+@media (max-width: 700px) {
+  .privacyModal {
+    align-items: flex-start;
+    padding:
+      calc(12px + var(--safe-top))
+      10px
+      calc(96px + var(--safe-bottom));
+  }
+
+  .privacyCard {
+    max-height: calc(100dvh - 120px);
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .privacyCard h2 {
+    font-size: 20px;
+  }
+
+  .privacyCard p,
+  .privacyCard li {
+    font-size: 14px;
+  }
+
+  .privacyOkBtn {
+    min-height: 48px;
+  }
+}

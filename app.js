@@ -83,6 +83,9 @@ const statusEl = document.querySelector("#status");
 const engineStatusEl = document.querySelector("#engineStatus");
 const startBtn = document.querySelector("#startBtn");
 const settingsBtn = document.querySelector("#settingsBtn");
+const privacyBtn = document.querySelector("#privacyBtn");
+const privacyModal = document.querySelector("#privacyModal");
+const privacyOkBtn = document.querySelector("#privacyOkBtn");
 const soundUnlockBtn = document.querySelector("#soundUnlockBtn");
 
 const leftOpenFill = document.querySelector("#leftOpenFill");
@@ -2202,6 +2205,45 @@ startBtn.addEventListener("click",()=>{
     statusEl.textContent=`실행 실패: ${err.name||""} ${err.message||err}`;
   });
 });
+
+
+const PRIVACY_NOTICE_KEY = "handChordPrivacyNoticeV1";
+
+function openPrivacyNotice() {
+  privacyModal.classList.remove("hidden");
+}
+
+function closePrivacyNotice(remember = true) {
+  privacyModal.classList.add("hidden");
+
+  if (remember) {
+    try {
+      localStorage.setItem(PRIVACY_NOTICE_KEY, "seen");
+    } catch (_) {}
+  }
+}
+
+privacyBtn.addEventListener("click", openPrivacyNotice);
+
+privacyOkBtn.addEventListener("click", () => {
+  closePrivacyNotice(true);
+});
+
+privacyModal.addEventListener("click", (e) => {
+  if (e.target === privacyModal) {
+    closePrivacyNotice(true);
+  }
+});
+
+// 첫 접속 시 한 번만 자동 표시.
+// 사용자는 HUD의 '개인정보 안내' 버튼으로 언제든 다시 열 수 있음.
+try {
+  if (localStorage.getItem(PRIVACY_NOTICE_KEY) !== "seen") {
+    setTimeout(openPrivacyNotice, 150);
+  }
+} catch (_) {
+  setTimeout(openPrivacyNotice, 150);
+}
 
 settingsBtn.addEventListener("click",openSettings);
 
