@@ -1,0 +1,402 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #111;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.stage { position: relative; width: 100vw; height: 100vh; }
+
+#video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  background: #111;
+}
+
+#canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hud {
+  position: absolute;
+  z-index: 8;
+  top: 14px;
+  left: 14px;
+  transform: none;
+  width: 230px;
+  padding: 10px 12px;
+  color: white;
+  text-align: left;
+  background: rgba(10,10,10,.52);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+}
+
+#currentChord {
+  margin-top: 0;
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 800;
+  min-height: 32px;
+}
+
+#status {
+  margin-top: 4px;
+  min-height: 18px;
+  font-size: 12px;
+  opacity: .88;
+}
+
+.buttonRow, .panelButtons {
+  display: flex;
+  justify-content: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+button, select, input { font: inherit; }
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 11px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.smallButton { padding: 7px 10px; }
+
+.miniHelp {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: .62;
+  line-height: 1.35;
+}
+
+/* 양쪽 손 펼침 미터 */
+.handMeter {
+  position: absolute;
+  z-index: 7;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 76px;
+  padding: 10px 7px;
+  color: white;
+  text-align: center;
+  background: rgba(10,10,10,.50);
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 14px;
+  backdrop-filter: blur(7px);
+}
+
+.leftMeter { left: 14px; top: 60%; }
+.rightMeter { right: 14px; top: 60%; }
+
+.meterTitle { font-size: 12px; font-weight: 700; }
+.meterSubtitle { margin-top: 1px; margin-bottom: 8px; font-size: 10px; opacity: .65; }
+
+.meterBody {
+  height: 240px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.meterLabels {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 10px;
+  opacity: .68;
+}
+
+.meterBar {
+  position: relative;
+  width: 18px;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 9px;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.28);
+}
+
+.meterFill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0%;
+  background: rgba(255,255,255,.80);
+  transition: height 55ms linear;
+}
+
+.tick {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgba(0,0,0,.34);
+}
+.t100 { top: 0%; }
+.t75 { top: 25%; }
+.t50 { top: 50%; }
+.t25 { top: 75%; }
+.t0 { top: calc(100% - 1px); }
+
+.meterValue { margin-top: 8px; font-size: 13px; font-weight: 800; }
+
+.panel {
+  position: absolute;
+  z-index: 30;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: 20px;
+  color: white;
+  background: rgba(18,18,18,.97);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 18px;
+  box-shadow: 0 24px 90px rgba(0,0,0,.45);
+}
+
+.hidden { display: none !important; }
+
+.panelHeader { display: flex; align-items: center; justify-content: space-between; }
+.panelHeader h2 { margin: 0; }
+
+.section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,.12);
+}
+
+.section h3 { margin: 0 0 8px; }
+.label { margin-bottom: 7px; font-size: 13px; opacity: .75; }
+
+select {
+  min-width: 200px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  color: white;
+  background: #2a2a2a;
+  border: 1px solid rgba(255,255,255,.20);
+}
+
+.description, .examples {
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  opacity: .68;
+}
+
+.inlineLabel { display: flex; align-items: center; gap: 10px; }
+
+.manualInputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.manualRow {
+  display: grid;
+  grid-template-columns: 55px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.manualRow input {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 9px;
+  color: white;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.20);
+}
+
+.sliderLabel {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.sliderLabel input { width: 100%; }
+
+@media (max-width: 750px) {
+  .hud { width: 210px; min-width: 0; }
+  .manualInputs { grid-template-columns: 1fr; }
+}
+
+
+.calibrationGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+.calCard {
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 12px;
+  background: rgba(255,255,255,.05);
+}
+.calTitle { font-weight: 800; margin-bottom: 7px; }
+.calLive { font-size: 13px; margin-bottom: 8px; }
+.calButtons { display: flex; flex-direction: column; gap: 7px; }
+.calButtons button { width: 100%; }
+.calSaved { margin-top: 8px; font-size: 11px; opacity: .70; }
+.calStatus { margin-top: 10px; min-height: 20px; font-size: 12px; font-weight: 700; }
+@media (max-width: 750px) {
+  .calibrationGrid { grid-template-columns: 1fr; }
+}
+
+
+/* ===== Mobile support ===== */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+.hud {
+  top: calc(10px + var(--safe-top));
+  left: calc(10px + var(--safe-left));
+}
+
+.leftMeter {
+  left: calc(8px + var(--safe-left));
+}
+
+.rightMeter {
+  right: calc(8px + var(--safe-right));
+}
+
+.panel {
+  padding-bottom: calc(20px + var(--safe-bottom));
+}
+
+button, select, input {
+  touch-action: manipulation;
+}
+
+@media (max-width: 700px) {
+  .hud {
+    width: 205px;
+    padding: 8px 10px;
+    border-radius: 12px;
+  }
+
+  #currentChord {
+    font-size: 26px;
+    min-height: 28px;
+  }
+
+  #status {
+    font-size: 11px;
+    min-height: 16px;
+  }
+
+  .miniHelp {
+    font-size: 10px;
+  }
+
+  .buttonRow {
+    margin-top: 6px;
+  }
+
+  .buttonRow button {
+    padding: 7px 9px;
+    font-size: 13px;
+  }
+
+  .handMeter {
+    width: 58px;
+    padding: 8px 5px;
+  }
+
+  .meterBody {
+    height: 155px;
+  }
+
+  .meterTitle {
+    font-size: 10px;
+  }
+
+  .meterSubtitle {
+    font-size: 9px;
+  }
+
+  .meterLabels {
+    font-size: 8px;
+  }
+
+  .meterValue {
+    font-size: 11px;
+  }
+
+  .panel {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px - var(--safe-top) - var(--safe-bottom));
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .panel h2 {
+    font-size: 21px;
+  }
+
+  .section h3 {
+    font-size: 16px;
+  }
+
+  select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inlineLabel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .manualInputs {
+    grid-template-columns: 1fr;
+  }
+
+  .calibrationGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* portrait phone: put the meters lower so they do not overlap the HUD */
+@media (max-width: 700px) and (orientation: portrait) {
+  .leftMeter,
+  .rightMeter {
+    top: 67%;
+  }
+}
+
+
+.engineStatus {
+  margin-top: 2px;
+  min-height: 11px;
+  font-size: 9px;
+  opacity: .48;
+}

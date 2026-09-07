@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Hand Chord v5</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+
+    <div class="hud">
+      <div id="currentChord">-</div>
+      <div id="status">카메라를 시작하세요.</div>
+      <div id="engineStatus" class="engineStatus"></div>
+
+      <div class="buttonRow">
+        <button id="startBtn">카메라 + 소리 시작</button>
+        <button id="settingsBtn">셋업</button>
+      </div>
+
+      <div class="miniHelp">
+        영역 밖으로 나가면 음 정지
+      </div>
+    </div>
+
+    <!-- 왼쪽 손 펼침 정도 -->
+    <div class="handMeter leftMeter">
+      <div class="meterTitle">왼쪽 손</div>
+      <div class="meterSubtitle">검지 펴짐</div>
+      <div class="meterBody">
+        <div class="meterLabels">
+          <span>100</span><span>75</span><span>50</span><span>25</span><span>0</span>
+        </div>
+        <div class="meterBar">
+          <div id="leftOpenFill" class="meterFill"></div>
+          <div class="tick t100"></div><div class="tick t75"></div>
+          <div class="tick t50"></div><div class="tick t25"></div><div class="tick t0"></div>
+        </div>
+      </div>
+      <div id="leftOpenValue" class="meterValue">--%</div>
+    </div>
+
+    <!-- 오른쪽 손 펼침 정도 -->
+    <div class="handMeter rightMeter">
+      <div class="meterTitle">오른쪽 손</div>
+      <div class="meterSubtitle">검지 펴짐</div>
+      <div class="meterBody">
+        <div class="meterBar">
+          <div id="rightOpenFill" class="meterFill"></div>
+          <div class="tick t100"></div><div class="tick t75"></div>
+          <div class="tick t50"></div><div class="tick t25"></div><div class="tick t0"></div>
+        </div>
+        <div class="meterLabels">
+          <span>100</span><span>75</span><span>50</span><span>25</span><span>0</span>
+        </div>
+      </div>
+      <div id="rightOpenValue" class="meterValue">--%</div>
+    </div>
+
+    <div id="settingsPanel" class="panel hidden">
+      <div class="panelHeader">
+        <h2>셋업</h2>
+        <button id="closeSettingsBtn" class="smallButton">닫기</button>
+      </div>
+
+      <div class="section">
+        <div class="label">모드</div>
+        <select id="modeSelect">
+          <option value="basic">기본 모드 - 양손</option>
+          <option value="manual">사용자 코드 모드</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <div class="label">카메라</div>
+        <select id="cameraFacingSelect">
+          <option value="user">전면 카메라</option>
+          <option value="environment">후면 카메라</option>
+        </select>
+        <p class="description">
+          모바일에서는 셋업 저장 시 카메라가 자동으로 다시 켜집니다.
+        </p>
+      </div>
+
+      <div id="basicSettings" class="section">
+        <h3>기본 모드</h3>
+        <p class="description">
+          왼쪽 원 = C~B 근음 · 오른쪽 원 = 코드 타입.<br>
+          오른쪽 타입도 원하는 것으로 직접 바꿀 수 있습니다.
+        </p>
+
+        <label class="inlineLabel">
+          오른쪽 코드 타입 개수
+          <select id="qualityCount"></select>
+        </label>
+
+        <div id="qualityInputs" class="manualInputs"></div>
+        <div class="examples">
+          예: maj, m, 7, maj7, m7, 6, m6, 9, add9, 7sus4, dim7,
+          m7b5, 7b9, 7#9, maj7#11, 13b9
+        </div>
+      </div>
+
+      <div id="manualSettings" class="section hidden">
+        <h3>사용자 코드 모드</h3>
+
+        <label class="inlineLabel">
+          원형 메뉴 코드 개수
+          <select id="slotCount"></select>
+        </label>
+
+        <div id="manualInputs" class="manualInputs"></div>
+
+        <div class="examples">
+          일반적인 코드 조합을 자유롭게 입력할 수 있습니다.<br>
+          예: Cadd9, A9, E6, CmMaj7, F#m7b5, G7b9, Cmaj7#11,
+          Bb13, Dm11, G7sus4, C6/9, C/E, C7(b9,#11)
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>검지 보정</h3>
+        <p class="description">
+          각 손마다 "완전히 접은 검지"와 "완전히 편 검지"를 직접 저장합니다.
+          버튼을 누른 뒤 약 0.8초 동안 그 자세를 유지하세요.
+        </p>
+
+        <div class="calibrationGrid">
+          <div class="calCard">
+            <div class="calTitle">왼쪽 손</div>
+            <div class="calLive">현재 원시값: <b id="leftRawValue">--</b></div>
+            <div class="calButtons">
+              <button id="leftClosedCalBtn">완전히 접힘 저장</button>
+              <button id="leftOpenCalBtn">완전히 펴짐 저장</button>
+            </div>
+            <div class="calSaved">
+              접힘 <span id="leftClosedSaved">--</span> ·
+              펴짐 <span id="leftOpenSaved">--</span>
+            </div>
+          </div>
+
+          <div class="calCard">
+            <div class="calTitle">오른쪽 손</div>
+            <div class="calLive">현재 원시값: <b id="rightRawValue">--</b></div>
+            <div class="calButtons">
+              <button id="rightClosedCalBtn">완전히 접힘 저장</button>
+              <button id="rightOpenCalBtn">완전히 펴짐 저장</button>
+            </div>
+            <div class="calSaved">
+              접힘 <span id="rightClosedSaved">--</span> ·
+              펴짐 <span id="rightOpenSaved">--</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="calibrationStatus" class="calStatus">보정 대기</div>
+      </div>
+
+      <div class="section">
+        <h3>신디 음색</h3>
+        <label class="sliderLabel">
+          <span>따뜻함</span>
+          <input id="toneSlider" type="range" min="0" max="100" value="25">
+          <span>밝음</span>
+        </label>
+      </div>
+
+      <div class="panelButtons">
+        <button id="saveSettingsBtn">저장</button>
+        <button id="resetSettingsBtn">기본값으로</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
