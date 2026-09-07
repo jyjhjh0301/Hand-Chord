@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
     "G7", "Am7", "Bdim", "Cadd9"
   ],
   tone: 25,
+  volume: 80,
   cameraFacing: "user",
   calibration: {
     left:  { closed: 0.28, open: 0.86 },
@@ -102,6 +103,8 @@ const slotCountSelect = document.querySelector("#slotCount");
 const manualInputs = document.querySelector("#manualInputs");
 
 const toneSlider = document.querySelector("#toneSlider");
+const volumeSlider = document.querySelector("#volumeSlider");
+const volumeValue = document.querySelector("#volumeValue");
 const cameraFacingSelect = document.querySelector("#cameraFacingSelect");
 
 const leftRawValue = document.querySelector("#leftRawValue");
@@ -435,7 +438,7 @@ class WarmSynth {
     this.compressor = null;
     this.channels = new Map();
     this.tone = settings.tone;
-    this.unlocked = false;
+    this.volume = settings.volume ?? 80;
   }
 
   createContextIfNeeded() {
@@ -458,76 +461,136 @@ class WarmSynth {
     this.compressor.release.value = 0.30;
 
     this.master = this.audioCtx.createGain();
-    this.master.gain.value = 0.82;
+    this.master.gain.value = this.volumeToGain(this.volume);
 
     this.master.connect(this.compressor);
     this.compressor.connect(this.audioCtx.destination);
   }
 
-  // 모바일 Safari/Chrome은 "사용자가 직접 누른 순간"에 AudioContext를
-  // 열고 resume 해야 한다. 카메라 권한을 기다린 뒤 실행하면 user gesture가
-  // 사라져서 영상은 나오는데 소리만 막힐 수 있다.
-  async unlockFromUserGesture() {
+  // 중요:
+  // 모바일에서는 "클릭 핸들러 안에서 바로" 소스 생성을 시작해야 한다.
+  // 그래서 await 전에 oscillator를 생성/start한다.
+  unlockNow() {
     this.createContextIfNeeded();
 
+    const now = this.audioCtx.currentTime;
+
+    // 거의 무음인 primer
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    osc.connect(gain);
+    gain.connect(this.master);
+    osc.start(now);
+    osc.stop(now + 0.03);
+
+    // resume()도 즉시 호출하되 여기서 await하지 않는다.
     try {
-      if (this.audioCtx.state === "suspended") {
-        await this.audioCtx.resume();
+      const p = this.audioCtx.resume();
+      if (p && typeof p.catch === "function") {
+        p.catch(err => console.warn("audio resume failed:", err));
       }
-
-      // iOS Safari용 아주 짧은 무음 버퍼 재생.
-      const buffer = this.audioCtx.createBuffer(1, 1, 22050);
-      const source = this.audioCtx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(this.master);
-      source.start(0);
-
-      // 일부 iOS 버전은 oscillator도 한 번 시작해야 안정적으로 unlock된다.
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
-      gain.gain.value = 0.00001;
-      osc.connect(gain);
-      gain.connect(this.master);
-      osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.02);
-
-      this.unlocked = this.audioCtx.state === "running";
-      return this.unlocked;
     } catch (err) {
-      console.warn("Audio unlock failed:", err);
-      this.unlocked = false;
-      return false;
+      console.warn("audio resume threw:", err);
     }
+
+    return this.audioCtx.state;
   }
 
-  async init() {
+  async waitUntilRunning(timeoutMs = 1000) {
     this.createContextIfNeeded();
 
-    // PC 등에서는 여기서도 resume 가능.
     try {
       if (this.audioCtx.state === "suspended") {
         await this.audioCtx.resume();
       }
     } catch (_) {}
 
-    this.unlocked = this.audioCtx.state === "running";
+    const start = performance.now();
+
+    while (
+      this.audioCtx.state !== "running" &&
+      performance.now() - start < timeoutMs
+    ) {
+      await new Promise(r => setTimeout(r, 40));
+    }
+
+    return this.audioCtx.state === "running";
+  }
+
+  async init() {
+    this.createContextIfNeeded();
+    await this.waitUntilRunning(600);
   }
 
   setTone(value) {
     this.tone = Number(value);
   }
 
+  volumeToGain(value) {
+    // 0~100%를 실제 오디오 gain 0~1.8 정도로 변환.
+    // 낮은 구간은 세밀하게, 높은 구간은 모바일에서도 충분히 크게.
+    const x = Math.max(0, Math.min(100, Number(value))) / 100;
+    return Math.pow(x, 1.35) * 1.8;
+  }
+
+  setVolume(value) {
+    this.volume = Number(value);
+
+    if (!this.master || !this.audioCtx) return;
+
+    const now = this.audioCtx.currentTime;
+    const target = this.volumeToGain(this.volume);
+
+    this.master.gain.cancelScheduledValues(now);
+    this.master.gain.setTargetAtTime(target, now, 0.03);
+  }
+
+  audioStateText() {
+    if (!this.audioCtx) return "없음";
+    return this.audioCtx.state;
+  }
+
+  // 사용자가 버튼을 직접 눌러 확인할 수 있는 확실한 테스트음
+  testToneNow() {
+    this.createContextIfNeeded();
+
+    const now = this.audioCtx.currentTime;
+
+    // user gesture 안에서 resume + start를 연달아 수행
+    try {
+      const p = this.audioCtx.resume();
+      if (p && typeof p.catch === "function") p.catch(()=>{});
+    } catch (_) {}
+
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.value = 523.25; // C5
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+
+    osc.connect(gain);
+    gain.connect(this.master);
+
+    osc.start(now);
+    osc.stop(now + 0.42);
+
+    return this.audioCtx.state;
+  }
+
   ensureRunning() {
     if (!this.audioCtx) return false;
 
     if (this.audioCtx.state !== "running") {
-      soundUnlockBtn.classList.remove("hidden");
       engineStatusEl.textContent =
-        `손 인식: ${handEngineName || "-"} · 소리 잠김`;
+        `손 인식: ${handEngineName || "-"} · 오디오 ${this.audioCtx.state}`;
       return false;
     }
 
-    soundUnlockBtn.classList.add("hidden");
     return true;
   }
 
@@ -547,8 +610,8 @@ class WarmSynth {
     const cutoff = 760 + (this.tone / 100) * 2100;
 
     const targetGain = Math.max(
-      0.018,
-      0.042 - Math.max(0, notes.length - 3) * 0.0032
+      0.024,
+      0.050 - Math.max(0, notes.length - 3) * 0.0035
     );
 
     for (const midi of notes) {
@@ -559,7 +622,7 @@ class WarmSynth {
 
       const noteGain = this.audioCtx.createGain();
       noteGain.gain.setValueAtTime(0.0001, now);
-      noteGain.gain.exponentialRampToValueAtTime(targetGain, now + 0.11);
+      noteGain.gain.exponentialRampToValueAtTime(targetGain, now + 0.09);
 
       filter.connect(noteGain);
       noteGain.connect(this.master);
@@ -576,8 +639,8 @@ class WarmSynth {
 
       const g1 = this.audioCtx.createGain();
       const g2 = this.audioCtx.createGain();
-      g1.gain.value = 0.80;
-      g2.gain.value = 0.20;
+      g1.gain.value = 0.82;
+      g2.gain.value = 0.22;
 
       osc1.connect(g1);
       osc2.connect(g2);
@@ -1516,10 +1579,11 @@ async function startCamera() {
 
   await synth.init();
   synth.setTone(settings.tone);
+  synth.setVolume(settings.volume ?? 80);
+  synth.setVolume(settings.volume ?? 80);
 
-  if (!synth.ensureRunning()) {
-    soundUnlockBtn.classList.remove("hidden");
-  }
+  engineStatusEl.textContent =
+    `오디오: ${synth.audioStateText()} · 손 인식 준비 중`;
 
   statusEl.textContent="손 인식 모델 불러오는 중...";
 
@@ -1571,17 +1635,16 @@ function loop(nowMs) {
       lastDetectAt = nowMs;
       detectErrorCount = 0;
 
-      const audioSuffix =
-        synth.audioCtx && synth.audioCtx.state !== "running"
-          ? " · 소리 잠김"
-          : "";
+      const audioState = synth.audioCtx
+        ? synth.audioCtx.state
+        : "없음";
 
       if (hands.length > 0) {
         engineStatusEl.textContent =
-          `손 인식: ${handEngineName} · ${hands.length}손${audioSuffix}`;
+          `손 ${hands.length} · 오디오 ${audioState}`;
       } else {
         engineStatusEl.textContent =
-          `손 인식: ${handEngineName} · 찾는 중${audioSuffix}`;
+          `손 찾는 중 · 오디오 ${audioState}`;
       }
     } catch (err) {
       detectErrorCount++;
@@ -1726,6 +1789,12 @@ function openSettings() {
   qualityCountSelect.value=settings.qualityCount;
   slotCountSelect.value=settings.slotCount;
   toneSlider.value=settings.tone;
+volumeSlider.value=settings.volume ?? 80;
+volumeValue.textContent=`${settings.volume ?? 80}%`;
+  volumeSlider.value=settings.volume ?? 80;
+  volumeValue.textContent=`${settings.volume ?? 80}%`;
+  volumeSlider.value=settings.volume ?? 80;
+  volumeValue.textContent=`${settings.volume ?? 80}%`;
 
   updateModeSettingsUI();
   buildQualityInputs();
@@ -1746,6 +1815,7 @@ async function saveSettings() {
   const nextQualityCount=Number(qualityCountSelect.value);
   const nextSlotCount=Number(slotCountSelect.value);
   const nextTone=Number(toneSlider.value);
+  const nextVolume=Number(volumeSlider.value);
 
   const nextQualities=[...qualityInputs.querySelectorAll("input")]
     .map(x=>x.value.trim());
@@ -1782,6 +1852,7 @@ async function saveSettings() {
   settings.qualityCount=nextQualityCount;
   settings.slotCount=nextSlotCount;
   settings.tone=nextTone;
+  settings.volume=nextVolume;
 
   ensureLength(settings.qualities,nextQualityCount,DEFAULT_QUALITIES);
   ensureLength(settings.manualChords,nextSlotCount,DEFAULT_SETTINGS.manualChords);
@@ -1791,6 +1862,7 @@ async function saveSettings() {
 
   persistSettings();
   synth.setTone(settings.tone);
+  synth.setVolume(settings.volume ?? 80);
   resetSelections(true);
   closeSettings();
 
@@ -1809,6 +1881,7 @@ function resetSettings() {
   persistSettings();
 
   synth.setTone(settings.tone);
+  synth.setVolume(settings.volume ?? 80);
   resetSelections(true);
 
   modeSelect.value=settings.mode;
@@ -1816,6 +1889,10 @@ function resetSettings() {
   qualityCountSelect.value=settings.qualityCount;
   slotCountSelect.value=settings.slotCount;
   toneSlider.value=settings.tone;
+volumeSlider.value=settings.volume ?? 80;
+volumeValue.textContent=`${settings.volume ?? 80}%`;
+  volumeSlider.value=settings.volume ?? 80;
+  volumeValue.textContent=`${settings.volume ?? 80}%`;
 
   updateModeSettingsUI();
   buildQualityInputs();
@@ -1828,13 +1905,12 @@ function resetSettings() {
 // 12. 이벤트 / 초기화
 // ============================================================
 
-startBtn.addEventListener("click",async ()=>{
-  // 중요: 카메라 권한창보다 먼저, 사용자의 클릭 제스처 안에서 오디오를 unlock
-  const audioOK = await synth.unlockFromUserGesture();
+startBtn.addEventListener("click",()=>{
+  // 모바일 핵심: await 없이 클릭 순간 바로 unlock
+  synth.unlockNow();
 
-  if (!audioOK) {
-    soundUnlockBtn.classList.remove("hidden");
-  }
+  engineStatusEl.textContent =
+    `오디오: ${synth.audioStateText()} · 카메라 시작 중`;
 
   startCamera().catch(err=>{
     console.error(err);
@@ -1844,15 +1920,17 @@ startBtn.addEventListener("click",async ()=>{
 
 settingsBtn.addEventListener("click",openSettings);
 
-soundUnlockBtn.addEventListener("click",async ()=>{
-  const ok = await synth.unlockFromUserGesture();
+soundUnlockBtn.addEventListener("click",()=>{
+  const state = synth.testToneNow();
 
-  if (ok) {
-    soundUnlockBtn.classList.add("hidden");
-    statusEl.textContent="소리 활성화 완료";
-  } else {
-    statusEl.textContent="소리 활성화 실패";
-  }
+  statusEl.textContent="C 음 테스트";
+  engineStatusEl.textContent=`오디오 상태: ${state}`;
+
+  // state가 바로 suspended여도 resume가 비동기로 running이 될 수 있으므로 잠시 후 다시 표시
+  setTimeout(()=>{
+    engineStatusEl.textContent=
+      `오디오 상태: ${synth.audioStateText()}`;
+  },250);
 });
 closeSettingsBtn.addEventListener("click",closeSettings);
 saveSettingsBtn.addEventListener("click",()=>{
@@ -1871,6 +1949,12 @@ toneSlider.addEventListener("input",()=>{
   synth.setTone(Number(toneSlider.value));
 });
 
+volumeSlider.addEventListener("input",()=>{
+  const v=Number(volumeSlider.value);
+  volumeValue.textContent=`${v}%`;
+  synth.setVolume(v);
+});
+
 leftClosedCalBtn.addEventListener("click",()=>startCalibration("left","closed"));
 leftOpenCalBtn.addEventListener("click",()=>startCalibration("left","open"));
 rightClosedCalBtn.addEventListener("click",()=>startCalibration("right","closed"));
@@ -1884,6 +1968,8 @@ cameraFacingSelect.value=settings.cameraFacing || "user";
 qualityCountSelect.value=settings.qualityCount;
 slotCountSelect.value=settings.slotCount;
 toneSlider.value=settings.tone;
+volumeSlider.value=settings.volume ?? 80;
+volumeValue.textContent=`${settings.volume ?? 80}%`;
 
 updateModeSettingsUI();
 buildQualityInputs();

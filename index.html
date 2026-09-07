@@ -18,7 +18,7 @@
 
       <div class="buttonRow">
         <button id="startBtn">카메라 + 소리 시작</button>
-        <button id="soundUnlockBtn" class="hidden">소리 켜기</button>
+        <button id="soundUnlockBtn">소리 테스트</button>
         <button id="settingsBtn">셋업</button>
       </div>
 
@@ -158,6 +158,18 @@
         </div>
 
         <div id="calibrationStatus" class="calStatus">보정 대기</div>
+      </div>
+
+      <div class="section">
+        <h3>음량</h3>
+        <label class="sliderLabel">
+          <span>작게</span>
+          <input id="volumeSlider" type="range" min="0" max="100" value="80">
+          <span id="volumeValue">80%</span>
+        </label>
+        <p class="description">
+          모바일에서 작게 들리면 80~100% 정도로 올려보세요.
+        </p>
       </div>
 
       <div class="section">
