@@ -147,10 +147,28 @@ let detectFps = 0;
 let fpsWindowStart = performance.now();
 
 function isMobileDevice() {
-  return (
-    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
-    (navigator.maxTouchPoints || 0) > 1
-  );
+  const ua = navigator.userAgent || "";
+
+  // iPadOS는 데스크톱 Safari처럼 "Macintosh"로 보일 수 있으므로 별도 처리.
+  const isIPadOS =
+    /Macintosh/i.test(ua) &&
+    (navigator.maxTouchPoints || 0) > 1;
+
+  if (isIPadOS) return true;
+
+  // Chromium 계열(Edge/Chrome)은 userAgentData.mobile이 있으면
+  // 이 값을 우선 사용한다.
+  // 터치스크린 Windows PC도 mobile=false이므로 PC가 모바일로 오인되지 않는다.
+  if (
+    navigator.userAgentData &&
+    typeof navigator.userAgentData.mobile === "boolean"
+  ) {
+    return navigator.userAgentData.mobile;
+  }
+
+  // fallback: 실제 모바일 UA만 모바일로 판단.
+  // maxTouchPoints만으로는 모바일 판정을 하지 않는다.
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
 }
 
 function isIOSDevice() {

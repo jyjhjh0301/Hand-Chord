@@ -815,3 +815,29 @@ button, select, input {
     font-size: 9px !important;
   }
 }
+
+
+/* =========================================================
+   v27 critical bug fixes
+   ========================================================= */
+
+/*
+  모바일용 #settingsPanel.panel { display:flex !important; } 규칙이
+  기존 .hidden { display:none !important; } 보다 specificity가 높아서
+  설정창이 처음부터 보이고, 닫기 버튼을 눌러도 사라지지 않았음.
+
+  ID까지 포함한 규칙으로 hidden을 최종 승자로 만든다.
+*/
+#settingsPanel.hidden {
+  display: none !important;
+}
+
+/*
+  혹시 모바일 media query 안의 display:flex가 뒤에서 재적용되어도
+  이 규칙이 파일 맨 끝에 있으므로 닫힘 상태가 유지된다.
+*/
+@media (max-width: 700px) and (orientation: portrait) {
+  #settingsPanel.hidden {
+    display: none !important;
+  }
+}
