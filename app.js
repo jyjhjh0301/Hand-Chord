@@ -24,6 +24,9 @@ const DEFAULT_SETTINGS = {
   ],
   tone: 25,
   volume: 80,
+  speakerBoost: 35,
+  handEngine: "auto",
+  performance: "fast",
   cameraFacing: "user",
   calibration: {
     left:  { closed: 0.28, open: 0.86 },
@@ -106,6 +109,10 @@ const toneSlider = document.querySelector("#toneSlider");
 const volumeSlider = document.querySelector("#volumeSlider");
 const volumeValue = document.querySelector("#volumeValue");
 const cameraFacingSelect = document.querySelector("#cameraFacingSelect");
+const handEngineSelect = document.querySelector("#handEngineSelect");
+const performanceSelect = document.querySelector("#performanceSelect");
+const speakerBoostSlider = document.querySelector("#speakerBoostSlider");
+const speakerBoostValue = document.querySelector("#speakerBoostValue");
 
 const leftRawValue = document.querySelector("#leftRawValue");
 const rightRawValue = document.querySelector("#rightRawValue");
@@ -134,11 +141,62 @@ let lastDetectAt = 0;
 let cachedHands = [];
 let detectErrorCount = 0;
 
+let detectCounter = 0;
+let detectFps = 0;
+let fpsWindowStart = performance.now();
+
 function isMobileDevice() {
   return (
     /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
     (navigator.maxTouchPoints || 0) > 1
   );
+}
+
+function isIOSDevice() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function performanceProfile() {
+  const mode = settings.performance || "fast";
+
+  if (mode === "quality") {
+    return {
+      width: 960,
+      height: 540,
+      cameraFps: 30,
+      inferenceInterval: 50
+    };
+  }
+
+  if (mode === "balanced") {
+    return {
+      width: 640,
+      height: 480,
+      cameraFps: 30,
+      inferenceInterval: 40
+    };
+  }
+
+  // 프레임 우선: 작은 프레임 + 최대 30회/초 추론
+  return {
+    width: 480,
+    height: 360,
+    cameraFps: 30,
+    inferenceInterval: 33
+  };
+}
+
+function preferredGpu() {
+  const choice = settings.handEngine || "auto";
+
+  if (choice === "gpu") return true;
+  if (choice === "cpu") return false;
+
+  // 자동:
+  // Android/대부분 데스크톱은 GPU 우선.
+  // iOS는 WebGL/브라우저 조합 편차가 커서 CPU 우선.
+  if (isMobileDevice() && isIOSDevice()) return false;
+  return true;
 }
 
 async function makeHandLandmarker(vision, useGpu) {
@@ -147,8 +205,6 @@ async function makeHandLandmarker(vision, useGpu) {
       "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
   };
 
-  // 모바일은 GPU delegate가 기기/브라우저에 따라 아예 손 검출이 안 되는 경우가 있어
-  // CPU(WASM)를 기본으로 사용한다.
   if (useGpu) {
     baseOptions.delegate = "GPU";
   }
@@ -157,43 +213,50 @@ async function makeHandLandmarker(vision, useGpu) {
     baseOptions,
     runningMode: "VIDEO",
     numHands: 2,
-
-    // 모바일 카메라는 흔들림/노이즈가 커서 조금 완화
     minHandDetectionConfidence: 0.30,
     minHandPresenceConfidence: 0.30,
     minTrackingConfidence: 0.30
   });
 }
 
+async function disposeHandLandmarker() {
+  if (!handLandmarker) return;
+
+  try {
+    if (typeof handLandmarker.close === "function") {
+      handLandmarker.close();
+    }
+  } catch (err) {
+    console.warn("HandLandmarker close failed:", err);
+  }
+
+  handLandmarker = null;
+}
+
 async function createHandLandmarker() {
+  await disposeHandLandmarker();
+
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm"
   );
 
-  const mobile = isMobileDevice();
+  const wantGpu = preferredGpu();
+  engineStatusEl.textContent =
+    `손 인식 엔진: ${wantGpu ? "GPU" : "CPU"} 로딩…`;
 
-  if (mobile) {
-    // 모바일: CPU 우선
-    engineStatusEl.textContent = "손 인식 엔진 불러오는 중…";
-    try {
-      handLandmarker = await makeHandLandmarker(vision, false);
-      handEngineName = "모바일 CPU";
-    } catch (cpuError) {
-      console.warn("CPU hand landmarker failed, trying GPU:", cpuError);
-      handLandmarker = await makeHandLandmarker(vision, true);
-      handEngineName = "모바일 GPU";
-    }
-  } else {
-    // PC: GPU 우선, 실패 시 CPU
-    try {
-      handLandmarker = await makeHandLandmarker(vision, true);
-      handEngineName = "GPU";
-    } catch (gpuError) {
-      console.warn("GPU hand landmarker failed, falling back to CPU:", gpuError);
-      handLandmarker = await makeHandLandmarker(vision, false);
-      handEngineName = "CPU";
-    }
+  try {
+    handLandmarker = await makeHandLandmarker(vision, wantGpu);
+    handEngineName = wantGpu ? "GPU" : "CPU";
+  } catch (firstError) {
+    console.warn("Preferred engine failed, trying fallback:", firstError);
+
+    handLandmarker = await makeHandLandmarker(vision, !wantGpu);
+    handEngineName = !wantGpu ? "GPU" : "CPU";
   }
+
+  detectCounter = 0;
+  detectFps = 0;
+  fpsWindowStart = performance.now();
 
   engineStatusEl.textContent = `손 인식: ${handEngineName}`;
 }
@@ -434,11 +497,17 @@ function buildChordName(root, quality) {
 class WarmSynth {
   constructor() {
     this.audioCtx = null;
-    this.master = null;
+
+    // 음성 -> synthBus -> compressor -> outputGain -> speaker
+    // 중요: volume을 compressor 뒤에서 조절해야 실제로 크게/작게 체감된다.
+    this.synthBus = null;
     this.compressor = null;
+    this.outputGain = null;
+
     this.channels = new Map();
     this.tone = settings.tone;
     this.volume = settings.volume ?? 80;
+    this.speakerBoost = settings.speakerBoost ?? 35;
   }
 
   createContextIfNeeded() {
@@ -453,38 +522,37 @@ class WarmSynth {
 
     this.audioCtx = new AudioContextClass();
 
+    this.synthBus = this.audioCtx.createGain();
+    this.synthBus.gain.value = 1.0;
+
     this.compressor = this.audioCtx.createDynamicsCompressor();
-    this.compressor.threshold.value = -22;
-    this.compressor.knee.value = 18;
-    this.compressor.ratio.value = 3;
-    this.compressor.attack.value = 0.012;
-    this.compressor.release.value = 0.30;
+    this.compressor.threshold.value = -16;
+    this.compressor.knee.value = 12;
+    this.compressor.ratio.value = 2.4;
+    this.compressor.attack.value = 0.01;
+    this.compressor.release.value = 0.26;
 
-    this.master = this.audioCtx.createGain();
-    this.master.gain.value = this.volumeToGain(this.volume);
+    this.outputGain = this.audioCtx.createGain();
+    this.outputGain.gain.value = this.volumeToGain(this.volume);
 
-    this.master.connect(this.compressor);
-    this.compressor.connect(this.audioCtx.destination);
+    this.synthBus.connect(this.compressor);
+    this.compressor.connect(this.outputGain);
+    this.outputGain.connect(this.audioCtx.destination);
   }
 
-  // 중요:
-  // 모바일에서는 "클릭 핸들러 안에서 바로" 소스 생성을 시작해야 한다.
-  // 그래서 await 전에 oscillator를 생성/start한다.
   unlockNow() {
     this.createContextIfNeeded();
 
     const now = this.audioCtx.currentTime;
 
-    // 거의 무음인 primer
     const osc = this.audioCtx.createOscillator();
     const gain = this.audioCtx.createGain();
     gain.gain.setValueAtTime(0.0001, now);
     osc.connect(gain);
-    gain.connect(this.master);
+    gain.connect(this.synthBus);
     osc.start(now);
     osc.stop(now + 0.03);
 
-    // resume()도 즉시 호출하되 여기서 await하지 않는다.
     try {
       const p = this.audioCtx.resume();
       if (p && typeof p.catch === "function") {
@@ -527,23 +595,41 @@ class WarmSynth {
     this.tone = Number(value);
   }
 
+  // 80% = 0 dB(1.0배), 100% = 약 +12 dB(4배)
+  // 이제 compressor 뒤의 실제 출력 gain이라 슬라이더 변화가 바로 들린다.
   volumeToGain(value) {
-    // 0~100%를 실제 오디오 gain 0~1.8 정도로 변환.
-    // 낮은 구간은 세밀하게, 높은 구간은 모바일에서도 충분히 크게.
-    const x = Math.max(0, Math.min(100, Number(value))) / 100;
-    return Math.pow(x, 1.35) * 1.8;
+    const v = Math.max(0, Math.min(100, Number(value)));
+
+    if (v <= 0) return 0;
+
+    let db;
+
+    if (v <= 80) {
+      db = -36 + (v / 80) * 36;
+    } else {
+      db = ((v - 80) / 20) * 12;
+    }
+
+    return Math.pow(10, db / 20);
   }
 
   setVolume(value) {
     this.volume = Number(value);
 
-    if (!this.master || !this.audioCtx) return;
+    if (!this.outputGain || !this.audioCtx) return;
 
     const now = this.audioCtx.currentTime;
     const target = this.volumeToGain(this.volume);
 
-    this.master.gain.cancelScheduledValues(now);
-    this.master.gain.setTargetAtTime(target, now, 0.03);
+    this.outputGain.gain.cancelScheduledValues(now);
+    this.outputGain.gain.setTargetAtTime(target, now, 0.025);
+  }
+
+  setSpeakerBoost(value) {
+    this.speakerBoost = Math.max(
+      0,
+      Math.min(100, Number(value))
+    );
   }
 
   audioStateText() {
@@ -551,13 +637,11 @@ class WarmSynth {
     return this.audioCtx.state;
   }
 
-  // 사용자가 버튼을 직접 눌러 확인할 수 있는 확실한 테스트음
   testToneNow() {
     this.createContextIfNeeded();
 
     const now = this.audioCtx.currentTime;
 
-    // user gesture 안에서 resume + start를 연달아 수행
     try {
       const p = this.audioCtx.resume();
       if (p && typeof p.catch === "function") p.catch(()=>{});
@@ -567,14 +651,14 @@ class WarmSynth {
     const gain = this.audioCtx.createGain();
 
     osc.type = "sine";
-    osc.frequency.value = 523.25; // C5
+    osc.frequency.value = 523.25;
 
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.025);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
 
     osc.connect(gain);
-    gain.connect(this.master);
+    gain.connect(this.synthBus);
 
     osc.start(now);
     osc.stop(now + 0.42);
@@ -583,15 +667,7 @@ class WarmSynth {
   }
 
   ensureRunning() {
-    if (!this.audioCtx) return false;
-
-    if (this.audioCtx.state !== "running") {
-      engineStatusEl.textContent =
-        `손 인식: ${handEngineName || "-"} · 오디오 ${this.audioCtx.state}`;
-      return false;
-    }
-
-    return true;
+    return !!this.audioCtx && this.audioCtx.state === "running";
   }
 
   playChord(chordName, channel = "basic") {
@@ -603,29 +679,38 @@ class WarmSynth {
     const old = this.channels.get(channel);
     if (old && old.chordName === chordName) return;
 
-    this.stopChannel(channel, 0.24);
+    this.stopChannel(channel, 0.22);
 
     const now = this.audioCtx.currentTime;
     const voices = [];
-    const cutoff = 760 + (this.tone / 100) * 2100;
+
+    // 따뜻한 톤 유지. 모바일 스피커 보강은 별도 octave harmonic으로 처리.
+    const cutoff = 900 + (this.tone / 100) * 2300;
 
     const targetGain = Math.max(
-      0.024,
-      0.050 - Math.max(0, notes.length - 3) * 0.0035
+      0.030,
+      0.060 - Math.max(0, notes.length - 3) * 0.004
     );
+
+    const mobileBoostAmount =
+      isMobileDevice()
+        ? (this.speakerBoost / 100) * 0.38
+        : 0;
 
     for (const midi of notes) {
       const filter = this.audioCtx.createBiquadFilter();
       filter.type = "lowpass";
       filter.frequency.setValueAtTime(cutoff, now);
-      filter.Q.value = 0.35;
+      filter.Q.value = 0.32;
 
       const noteGain = this.audioCtx.createGain();
       noteGain.gain.setValueAtTime(0.0001, now);
-      noteGain.gain.exponentialRampToValueAtTime(targetGain, now + 0.09);
+      noteGain.gain.exponentialRampToValueAtTime(targetGain, now + 0.085);
 
       filter.connect(noteGain);
-      noteGain.connect(this.master);
+      noteGain.connect(this.synthBus);
+
+      const oscillators = [];
 
       const osc1 = this.audioCtx.createOscillator();
       osc1.type = "sine";
@@ -650,8 +735,27 @@ class WarmSynth {
       osc1.start(now);
       osc2.start(now);
 
+      oscillators.push(osc1, osc2);
+
+      // 휴대폰 스피커는 C3 같은 저음을 거의 못 냄.
+      // 한 옥타브 위 sine을 약하게 섞으면 같은 화음으로 훨씬 잘 들린다.
+      if (mobileBoostAmount > 0) {
+        const upper = this.audioCtx.createOscillator();
+        const upperGain = this.audioCtx.createGain();
+
+        upper.type = "sine";
+        upper.frequency.value = midiToFreq(midi + 12);
+        upperGain.gain.value = mobileBoostAmount;
+
+        upper.connect(upperGain);
+        upperGain.connect(filter);
+        upper.start(now);
+
+        oscillators.push(upper);
+      }
+
       voices.push({
-        oscillators: [osc1, osc2],
+        oscillators,
         gain: noteGain
       });
     }
@@ -662,7 +766,7 @@ class WarmSynth {
     });
   }
 
-  stopChannel(channel, releaseSeconds = 0.28) {
+  stopChannel(channel, releaseSeconds = 0.26) {
     if (!this.audioCtx) return;
 
     const active = this.channels.get(channel);
@@ -686,7 +790,7 @@ class WarmSynth {
 
   stopAll() {
     for (const channel of [...this.channels.keys()]) {
-      this.stopChannel(channel, 0.30);
+      this.stopChannel(channel, 0.28);
     }
   }
 
@@ -1528,24 +1632,18 @@ async function openCameraStream() {
 
   statusEl.textContent="카메라 권한 요청 중...";
 
-  const mobile = isMobileDevice();
+  const profile = performanceProfile();
   let stream;
 
-  // 모바일에서는 1280x720을 계속 AI에 넣으면 기기에 따라 너무 무거울 수 있음.
-  // 640x480 정도로 낮추면 손 추적이 훨씬 안정적인 경우가 많다.
-  const videoConstraints = mobile
-    ? {
-        width:{ideal:640},
-        height:{ideal:480},
-        frameRate:{ideal:30, max:30},
-        facingMode:{ideal:settings.cameraFacing}
-      }
-    : {
-        width:{ideal:1280},
-        height:{ideal:720},
-        frameRate:{ideal:30, max:60},
-        facingMode:{ideal:settings.cameraFacing}
-      };
+  const videoConstraints = {
+    width:{ideal:profile.width},
+    height:{ideal:profile.height},
+    frameRate:{
+      ideal:profile.cameraFps,
+      max:profile.cameraFps
+    },
+    facingMode:{ideal:settings.cameraFacing}
+  };
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -1570,6 +1668,7 @@ async function openCameraStream() {
   await video.play();
 
   lastVideoTime = -1;
+  lastDetectAt = 0;
   cachedHands = [];
   detectErrorCount = 0;
 }
@@ -1580,6 +1679,7 @@ async function startCamera() {
   await synth.init();
   synth.setTone(settings.tone);
   synth.setVolume(settings.volume ?? 80);
+  synth.setSpeakerBoost(settings.speakerBoost ?? 35);
   synth.setVolume(settings.volume ?? 80);
 
   engineStatusEl.textContent =
@@ -1622,7 +1722,9 @@ function loop(nowMs) {
 
   // 모바일 CPU에서 매 화면 refresh(60~120Hz)마다 추론하면 너무 무거움.
   // 최대 약 30fps, 그리고 실제 새 카메라 프레임이 들어왔을 때만 추론한다.
-  const inferenceInterval = isMobileDevice() ? 33 : 16;
+  const inferenceInterval = isMobileDevice()
+    ? performanceProfile().inferenceInterval
+    : 16;
   const hasNewFrame = video.currentTime !== lastVideoTime;
 
   if (hasNewFrame && nowMs - lastDetectAt >= inferenceInterval) {
@@ -1635,16 +1737,24 @@ function loop(nowMs) {
       lastDetectAt = nowMs;
       detectErrorCount = 0;
 
+      detectCounter++;
+      const fpsNow = performance.now();
+      if (fpsNow - fpsWindowStart >= 1000) {
+        detectFps = detectCounter * 1000 / (fpsNow - fpsWindowStart);
+        detectCounter = 0;
+        fpsWindowStart = fpsNow;
+      }
+
       const audioState = synth.audioCtx
         ? synth.audioCtx.state
         : "없음";
 
       if (hands.length > 0) {
         engineStatusEl.textContent =
-          `손 ${hands.length} · 오디오 ${audioState}`;
+          `${handEngineName} · ${detectFps.toFixed(0)}fps · 손 ${hands.length} · 오디오 ${audioState}`;
       } else {
         engineStatusEl.textContent =
-          `손 찾는 중 · 오디오 ${audioState}`;
+          `${handEngineName} · ${detectFps.toFixed(0)}fps · 손 찾는 중 · 오디오 ${audioState}`;
       }
     } catch (err) {
       detectErrorCount++;
@@ -1786,15 +1896,17 @@ function updateModeSettingsUI() {
 function openSettings() {
   modeSelect.value=settings.mode;
   cameraFacingSelect.value=settings.cameraFacing || "user";
+  handEngineSelect.value=settings.handEngine || "auto";
+  performanceSelect.value=settings.performance || "fast";
   qualityCountSelect.value=settings.qualityCount;
   slotCountSelect.value=settings.slotCount;
   toneSlider.value=settings.tone;
-volumeSlider.value=settings.volume ?? 80;
-volumeValue.textContent=`${settings.volume ?? 80}%`;
+
   volumeSlider.value=settings.volume ?? 80;
   volumeValue.textContent=`${settings.volume ?? 80}%`;
-  volumeSlider.value=settings.volume ?? 80;
-  volumeValue.textContent=`${settings.volume ?? 80}%`;
+
+  speakerBoostSlider.value=settings.speakerBoost ?? 35;
+  speakerBoostValue.textContent=`${settings.speakerBoost ?? 35}%`;
 
   updateModeSettingsUI();
   buildQualityInputs();
@@ -1810,12 +1922,18 @@ function closeSettings() {
 
 async function saveSettings() {
   const previousFacing = settings.cameraFacing || "user";
+  const previousEngine = settings.handEngine || "auto";
+  const previousPerformance = settings.performance || "fast";
+
   const nextMode=modeSelect.value;
   const nextFacing=cameraFacingSelect.value;
+  const nextEngine=handEngineSelect.value;
+  const nextPerformance=performanceSelect.value;
   const nextQualityCount=Number(qualityCountSelect.value);
   const nextSlotCount=Number(slotCountSelect.value);
   const nextTone=Number(toneSlider.value);
   const nextVolume=Number(volumeSlider.value);
+  const nextSpeakerBoost=Number(speakerBoostSlider.value);
 
   const nextQualities=[...qualityInputs.querySelectorAll("input")]
     .map(x=>x.value.trim());
@@ -1849,10 +1967,13 @@ async function saveSettings() {
 
   settings.mode=nextMode;
   settings.cameraFacing=nextFacing;
+  settings.handEngine=nextEngine;
+  settings.performance=nextPerformance;
   settings.qualityCount=nextQualityCount;
   settings.slotCount=nextSlotCount;
   settings.tone=nextTone;
   settings.volume=nextVolume;
+  settings.speakerBoost=nextSpeakerBoost;
 
   ensureLength(settings.qualities,nextQualityCount,DEFAULT_QUALITIES);
   ensureLength(settings.manualChords,nextSlotCount,DEFAULT_SETTINGS.manualChords);
@@ -1863,10 +1984,23 @@ async function saveSettings() {
   persistSettings();
   synth.setTone(settings.tone);
   synth.setVolume(settings.volume ?? 80);
+  synth.setSpeakerBoost(settings.speakerBoost ?? 35);
   resetSelections(true);
   closeSettings();
 
-  if (previousFacing !== settings.cameraFacing) {
+  const cameraProfileChanged =
+    previousFacing !== settings.cameraFacing ||
+    previousPerformance !== settings.performance;
+
+  const engineChanged =
+    previousEngine !== settings.handEngine;
+
+  if (cameraStarted && engineChanged) {
+    statusEl.textContent="손 인식 엔진 전환 중...";
+    await createHandLandmarker();
+  }
+
+  if (cameraStarted && cameraProfileChanged) {
     await restartCameraForFacingChange();
   }
 
@@ -1882,17 +2016,22 @@ function resetSettings() {
 
   synth.setTone(settings.tone);
   synth.setVolume(settings.volume ?? 80);
+  synth.setSpeakerBoost(settings.speakerBoost ?? 35);
   resetSelections(true);
 
   modeSelect.value=settings.mode;
   cameraFacingSelect.value=settings.cameraFacing || "user";
+  handEngineSelect.value=settings.handEngine || "auto";
+  performanceSelect.value=settings.performance || "fast";
   qualityCountSelect.value=settings.qualityCount;
   slotCountSelect.value=settings.slotCount;
   toneSlider.value=settings.tone;
-volumeSlider.value=settings.volume ?? 80;
-volumeValue.textContent=`${settings.volume ?? 80}%`;
+
   volumeSlider.value=settings.volume ?? 80;
   volumeValue.textContent=`${settings.volume ?? 80}%`;
+
+  speakerBoostSlider.value=settings.speakerBoost ?? 35;
+  speakerBoostValue.textContent=`${settings.speakerBoost ?? 35}%`;
 
   updateModeSettingsUI();
   buildQualityInputs();
@@ -1955,6 +2094,12 @@ volumeSlider.addEventListener("input",()=>{
   synth.setVolume(v);
 });
 
+speakerBoostSlider.addEventListener("input",()=>{
+  const v=Number(speakerBoostSlider.value);
+  speakerBoostValue.textContent=`${v}%`;
+  synth.setSpeakerBoost(v);
+});
+
 leftClosedCalBtn.addEventListener("click",()=>startCalibration("left","closed"));
 leftOpenCalBtn.addEventListener("click",()=>startCalibration("left","open"));
 rightClosedCalBtn.addEventListener("click",()=>startCalibration("right","closed"));
@@ -1965,11 +2110,17 @@ fillCountSelect(slotCountSelect,3,24);
 
 modeSelect.value=settings.mode;
 cameraFacingSelect.value=settings.cameraFacing || "user";
+handEngineSelect.value=settings.handEngine || "auto";
+performanceSelect.value=settings.performance || "fast";
 qualityCountSelect.value=settings.qualityCount;
 slotCountSelect.value=settings.slotCount;
 toneSlider.value=settings.tone;
+
 volumeSlider.value=settings.volume ?? 80;
 volumeValue.textContent=`${settings.volume ?? 80}%`;
+
+speakerBoostSlider.value=settings.speakerBoost ?? 35;
+speakerBoostValue.textContent=`${settings.speakerBoost ?? 35}%`;
 
 updateModeSettingsUI();
 buildQualityInputs();

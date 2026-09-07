@@ -86,6 +86,29 @@
         </p>
       </div>
 
+      <div class="section">
+        <h3>모바일 손 인식 성능</h3>
+
+        <div class="label">손 인식 엔진</div>
+        <select id="handEngineSelect">
+          <option value="auto">자동</option>
+          <option value="gpu">GPU - 빠름</option>
+          <option value="cpu">CPU - 호환성</option>
+        </select>
+
+        <div class="label perfGap">성능 모드</div>
+        <select id="performanceSelect">
+          <option value="fast">프레임 우선</option>
+          <option value="balanced">균형</option>
+          <option value="quality">인식 품질 우선</option>
+        </select>
+
+        <p class="description">
+          모바일에서 느리면 GPU + 프레임 우선을 먼저 사용하세요.
+          GPU에서 손이 안 잡히는 기기는 CPU로 바꾸면 됩니다.
+        </p>
+      </div>
+
       <div id="basicSettings" class="section">
         <h3>기본 모드</h3>
         <p class="description">
@@ -168,7 +191,16 @@
           <span id="volumeValue">80%</span>
         </label>
         <p class="description">
-          모바일에서 작게 들리면 80~100% 정도로 올려보세요.
+          이번 버전은 실제 최종 출력단의 음량을 조절합니다.
+        </p>
+
+        <label class="sliderLabel boostRow">
+          <span>저음</span>
+          <input id="speakerBoostSlider" type="range" min="0" max="100" value="35">
+          <span id="speakerBoostValue">35%</span>
+        </label>
+        <p class="description">
+          모바일 스피커 보강: 한 옥타브 위 성분을 조금 섞어 휴대폰에서 더 잘 들리게 합니다.
         </p>
       </div>
 

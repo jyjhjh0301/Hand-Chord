@@ -405,3 +405,12 @@ button, select, input {
 #soundUnlockBtn {
   font-weight: 700;
 }
+
+
+.perfGap {
+  margin-top: 12px;
+}
+
+.boostRow {
+  margin-top: 12px;
+}
