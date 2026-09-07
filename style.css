@@ -483,3 +483,86 @@ button, select, input {
     min-height: 44px;
   }
 }
+
+
+/* =========================================================
+   v23 - robust mobile settings layout
+   ========================================================= */
+
+.panelScroll {
+  overflow: visible;
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .panel {
+    position: fixed !important;
+
+    /* JS updates these from window.visualViewport */
+    top: var(--vv-top, 12px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: auto !important;
+
+    width: auto !important;
+    height: var(--vv-panel-height, calc(100dvh - 32px)) !important;
+    max-height: none !important;
+
+    transform: none !important;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 0 !important;
+    overflow: hidden !important;
+
+    border-radius: 14px;
+  }
+
+  .panelHeader {
+    flex: 0 0 auto;
+    padding: 14px 16px 12px;
+    background: rgba(18,18,18,.99);
+    border-bottom: 1px solid rgba(255,255,255,.10);
+    position: relative;
+    z-index: 4;
+  }
+
+  .panelScroll {
+    flex: 1 1 auto;
+    min-height: 0;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+
+    padding: 0 16px 30px;
+  }
+
+  .panelButtons {
+    position: relative !important;
+    bottom: auto !important;
+    z-index: 6;
+
+    flex: 0 0 auto;
+
+    margin: 0 !important;
+    padding:
+      12px 16px
+      calc(18px + var(--safe-bottom));
+
+    background: rgba(18,18,18,.995);
+    border-top: 1px solid rgba(255,255,255,.12);
+
+    box-shadow: 0 -12px 28px rgba(0,0,0,.35);
+  }
+
+  .panelButtons button {
+    min-height: 46px;
+  }
+
+  body.settingsOpen {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}

@@ -1907,6 +1907,52 @@ function loop(nowMs) {
   requestAnimationFrame(loop);
 }
 
+
+function updateVisualViewportVars() {
+  const root = document.documentElement;
+
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+
+    // Leave explicit space above and below the panel so browser chrome
+    // never sits directly on the Save button.
+    const topGap = 12;
+    const bottomGap = 24;
+
+    const top = Math.max(0, vv.offsetTop) + topGap;
+    const height = Math.max(
+      260,
+      vv.height - topGap - bottomGap
+    );
+
+    root.style.setProperty("--vv-top", `${top}px`);
+    root.style.setProperty("--vv-panel-height", `${height}px`);
+  } else {
+    root.style.setProperty("--vv-top", "12px");
+    root.style.setProperty("--vv-panel-height", "calc(100vh - 36px)");
+  }
+}
+
+updateVisualViewportVars();
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener(
+    "resize",
+    updateVisualViewportVars
+  );
+
+  window.visualViewport.addEventListener(
+    "scroll",
+    updateVisualViewportVars
+  );
+}
+
+window.addEventListener(
+  "orientationchange",
+  () => setTimeout(updateVisualViewportVars, 120)
+);
+
+
 // ============================================================
 // 11. 셋업 UI
 // ============================================================
@@ -1986,11 +2032,19 @@ function openSettings() {
   buildManualInputs();
   refreshCalibrationUI();
 
+  updateVisualViewportVars();
   settingsPanel.classList.remove("hidden");
+  document.body.classList.add("settingsOpen");
+
+  const panelScroll = settingsPanel.querySelector(".panelScroll");
+  if (panelScroll) {
+    panelScroll.scrollTop = 0;
+  }
 }
 
 function closeSettings() {
   settingsPanel.classList.add("hidden");
+  document.body.classList.remove("settingsOpen");
 }
 
 async function saveSettings() {
