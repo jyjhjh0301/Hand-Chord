@@ -79,6 +79,7 @@ const statusEl = document.querySelector("#status");
 const engineStatusEl = document.querySelector("#engineStatus");
 const startBtn = document.querySelector("#startBtn");
 const settingsBtn = document.querySelector("#settingsBtn");
+const soundUnlockBtn = document.querySelector("#soundUnlockBtn");
 
 const leftOpenFill = document.querySelector("#leftOpenFill");
 const leftOpenValue = document.querySelector("#leftOpenValue");
@@ -432,62 +433,119 @@ class WarmSynth {
     this.audioCtx = null;
     this.master = null;
     this.compressor = null;
-
-    // 채널별로 독립적인 코드를 유지한다.
-    // basic  = 기본 양손 모드에서 만들어지는 하나의 코드
-    // left   = 사용자 모드 왼손 코드
-    // right  = 사용자 모드 오른손 코드
     this.channels = new Map();
-
     this.tone = settings.tone;
+    this.unlocked = false;
+  }
+
+  createContextIfNeeded() {
+    if (this.audioCtx) return;
+
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      throw new Error("이 브라우저는 Web Audio를 지원하지 않습니다.");
+    }
+
+    this.audioCtx = new AudioContextClass();
+
+    this.compressor = this.audioCtx.createDynamicsCompressor();
+    this.compressor.threshold.value = -22;
+    this.compressor.knee.value = 18;
+    this.compressor.ratio.value = 3;
+    this.compressor.attack.value = 0.012;
+    this.compressor.release.value = 0.30;
+
+    this.master = this.audioCtx.createGain();
+    this.master.gain.value = 0.82;
+
+    this.master.connect(this.compressor);
+    this.compressor.connect(this.audioCtx.destination);
+  }
+
+  // 모바일 Safari/Chrome은 "사용자가 직접 누른 순간"에 AudioContext를
+  // 열고 resume 해야 한다. 카메라 권한을 기다린 뒤 실행하면 user gesture가
+  // 사라져서 영상은 나오는데 소리만 막힐 수 있다.
+  async unlockFromUserGesture() {
+    this.createContextIfNeeded();
+
+    try {
+      if (this.audioCtx.state === "suspended") {
+        await this.audioCtx.resume();
+      }
+
+      // iOS Safari용 아주 짧은 무음 버퍼 재생.
+      const buffer = this.audioCtx.createBuffer(1, 1, 22050);
+      const source = this.audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(this.master);
+      source.start(0);
+
+      // 일부 iOS 버전은 oscillator도 한 번 시작해야 안정적으로 unlock된다.
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+      gain.gain.value = 0.00001;
+      osc.connect(gain);
+      gain.connect(this.master);
+      osc.start();
+      osc.stop(this.audioCtx.currentTime + 0.02);
+
+      this.unlocked = this.audioCtx.state === "running";
+      return this.unlocked;
+    } catch (err) {
+      console.warn("Audio unlock failed:", err);
+      this.unlocked = false;
+      return false;
+    }
   }
 
   async init() {
-    if (!this.audioCtx) {
-      this.audioCtx = new AudioContext();
+    this.createContextIfNeeded();
 
-      this.compressor = this.audioCtx.createDynamicsCompressor();
-      this.compressor.threshold.value = -22;
-      this.compressor.knee.value = 18;
-      this.compressor.ratio.value = 3;
-      this.compressor.attack.value = 0.012;
-      this.compressor.release.value = 0.30;
+    // PC 등에서는 여기서도 resume 가능.
+    try {
+      if (this.audioCtx.state === "suspended") {
+        await this.audioCtx.resume();
+      }
+    } catch (_) {}
 
-      this.master = this.audioCtx.createGain();
-      this.master.gain.value = 0.82;
-
-      this.master.connect(this.compressor);
-      this.compressor.connect(this.audioCtx.destination);
-    }
-
-    if (this.audioCtx.state === "suspended") {
-      await this.audioCtx.resume();
-    }
+    this.unlocked = this.audioCtx.state === "running";
   }
 
   setTone(value) {
     this.tone = Number(value);
   }
 
+  ensureRunning() {
+    if (!this.audioCtx) return false;
+
+    if (this.audioCtx.state !== "running") {
+      soundUnlockBtn.classList.remove("hidden");
+      engineStatusEl.textContent =
+        `손 인식: ${handEngineName || "-"} · 소리 잠김`;
+      return false;
+    }
+
+    soundUnlockBtn.classList.add("hidden");
+    return true;
+  }
+
   playChord(chordName, channel = "basic") {
-    if (!this.audioCtx) return;
+    if (!this.ensureRunning()) return;
 
     const notes = chordToMidi(chordName);
     if (!notes) return;
 
     const old = this.channels.get(channel);
-
-    // 같은 손/채널에서 같은 코드면 새로 만들지 않는다.
     if (old && old.chordName === chordName) return;
 
-    // 이 손이 이전에 잡고 있던 코드만 release.
     this.stopChannel(channel, 0.24);
 
     const now = this.audioCtx.currentTime;
     const voices = [];
     const cutoff = 760 + (this.tone / 100) * 2100;
 
-    // 두 코드를 동시에 울릴 때 너무 커지지 않도록 음 수에 따라 자동 보정.
     const targetGain = Math.max(
       0.018,
       0.042 - Math.max(0, notes.length - 3) * 0.0032
@@ -1459,6 +1517,10 @@ async function startCamera() {
   await synth.init();
   synth.setTone(settings.tone);
 
+  if (!synth.ensureRunning()) {
+    soundUnlockBtn.classList.remove("hidden");
+  }
+
   statusEl.textContent="손 인식 모델 불러오는 중...";
 
   if (!handLandmarker) await createHandLandmarker();
@@ -1509,10 +1571,17 @@ function loop(nowMs) {
       lastDetectAt = nowMs;
       detectErrorCount = 0;
 
+      const audioSuffix =
+        synth.audioCtx && synth.audioCtx.state !== "running"
+          ? " · 소리 잠김"
+          : "";
+
       if (hands.length > 0) {
-        engineStatusEl.textContent = `손 인식: ${handEngineName} · ${hands.length}손`;
+        engineStatusEl.textContent =
+          `손 인식: ${handEngineName} · ${hands.length}손${audioSuffix}`;
       } else {
-        engineStatusEl.textContent = `손 인식: ${handEngineName} · 찾는 중`;
+        engineStatusEl.textContent =
+          `손 인식: ${handEngineName} · 찾는 중${audioSuffix}`;
       }
     } catch (err) {
       detectErrorCount++;
@@ -1759,7 +1828,14 @@ function resetSettings() {
 // 12. 이벤트 / 초기화
 // ============================================================
 
-startBtn.addEventListener("click",()=>{
+startBtn.addEventListener("click",async ()=>{
+  // 중요: 카메라 권한창보다 먼저, 사용자의 클릭 제스처 안에서 오디오를 unlock
+  const audioOK = await synth.unlockFromUserGesture();
+
+  if (!audioOK) {
+    soundUnlockBtn.classList.remove("hidden");
+  }
+
   startCamera().catch(err=>{
     console.error(err);
     statusEl.textContent=`실행 실패: ${err.name||""} ${err.message||err}`;
@@ -1767,6 +1843,17 @@ startBtn.addEventListener("click",()=>{
 });
 
 settingsBtn.addEventListener("click",openSettings);
+
+soundUnlockBtn.addEventListener("click",async ()=>{
+  const ok = await synth.unlockFromUserGesture();
+
+  if (ok) {
+    soundUnlockBtn.classList.add("hidden");
+    statusEl.textContent="소리 활성화 완료";
+  } else {
+    statusEl.textContent="소리 활성화 실패";
+  }
+});
 closeSettingsBtn.addEventListener("click",closeSettings);
 saveSettingsBtn.addEventListener("click",()=>{
   saveSettings().catch(err=>{
