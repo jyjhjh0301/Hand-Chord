@@ -566,3 +566,98 @@ button, select, input {
     overscroll-behavior: none;
   }
 }
+
+
+/* =========================================================
+   v24 - Samsung Internet / mobile browser hard fix
+   ========================================================= */
+
+.panelHeaderButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.saveTopButton {
+  font-weight: 800;
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  #settingsPanel.panel {
+    position: fixed !important;
+
+    /*
+      일부 모바일 브라우저는 주소창/하단 바를 visualViewport 계산에
+      일관되게 반영하지 않는다. 그래서 아래쪽에 아예 큰 안전영역을
+      강제로 남긴다.
+    */
+    top: calc(8px + var(--safe-top)) !important;
+    bottom: calc(96px + var(--safe-bottom)) !important;
+    left: 8px !important;
+    right: 8px !important;
+
+    width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+
+    transform: none !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    padding: 0 !important;
+    overflow: hidden !important;
+
+    border-radius: 14px !important;
+  }
+
+  #settingsPanel .panelHeader {
+    flex: 0 0 auto !important;
+    padding: 12px 14px !important;
+    background: rgba(18,18,18,.995) !important;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+  }
+
+  #settingsPanel .panelScroll {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: 0 !important;
+
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    overscroll-behavior-y: contain;
+
+    padding: 0 14px 180px !important;
+  }
+
+  /*
+    아래 버튼 영역은 콘텐츠 스크롤과 완전히 분리.
+    브라우저 하단 바가 있어도 패널 자체가 이미 96px 위에서 끝난다.
+  */
+  #settingsPanel .panelButtons {
+    flex: 0 0 auto !important;
+    position: static !important;
+
+    margin: 0 !important;
+    padding: 10px 14px 14px !important;
+
+    background: rgba(18,18,18,.995) !important;
+    border-top: 1px solid rgba(255,255,255,.12);
+
+    display: flex !important;
+    gap: 8px;
+  }
+
+  #settingsPanel .panelButtons button {
+    flex: 1;
+    min-height: 46px;
+  }
+
+  #settingsPanel .saveTopButton {
+    min-height: 38px;
+    padding: 7px 13px;
+  }
+}

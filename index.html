@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Hand Chord v5</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=24" />
 </head>
 <body>
   <div class="stage">
@@ -64,7 +64,10 @@
     <div id="settingsPanel" class="panel hidden">
       <div class="panelHeader">
         <h2>셋업</h2>
-        <button id="closeSettingsBtn" class="smallButton">닫기</button>
+        <div class="panelHeaderButtons">
+          <button id="saveSettingsTopBtn" class="saveTopButton">저장</button>
+          <button id="closeSettingsBtn" class="smallButton">닫기</button>
+        </div>
       </div>
 
       <div class="panelScroll">
@@ -224,6 +227,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=24"></script>
 </body>
 </html>

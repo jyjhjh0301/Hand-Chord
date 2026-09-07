@@ -91,6 +91,7 @@ const rightOpenFill = document.querySelector("#rightOpenFill");
 const rightOpenValue = document.querySelector("#rightOpenValue");
 
 const settingsPanel = document.querySelector("#settingsPanel");
+const saveSettingsTopBtn = document.querySelector("#saveSettingsTopBtn");
 const closeSettingsBtn = document.querySelector("#closeSettingsBtn");
 const saveSettingsBtn = document.querySelector("#saveSettingsBtn");
 const resetSettingsBtn = document.querySelector("#resetSettingsBtn");
@@ -2199,12 +2200,17 @@ soundUnlockBtn.addEventListener("click",()=>{
   },250);
 });
 closeSettingsBtn.addEventListener("click",closeSettings);
-saveSettingsBtn.addEventListener("click",()=>{
+
+function runSaveSettings() {
   saveSettings().catch(err=>{
     console.error(err);
     statusEl.textContent="셋업 저장 중 오류";
   });
-});
+}
+
+saveSettingsTopBtn.addEventListener("click",runSaveSettings);
+saveSettingsBtn.addEventListener("click",runSaveSettings);
+
 resetSettingsBtn.addEventListener("click",resetSettings);
 
 modeSelect.addEventListener("change",updateModeSettingsUI);
