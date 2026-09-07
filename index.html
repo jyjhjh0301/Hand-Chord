@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Hand Chord v29</title>
-  <link rel="stylesheet" href="style.css?v=29" />
+  <title>Hand Chord v32</title>
+  <link rel="stylesheet" href="style.css?v=32" />
 </head>
 <body>
   <div class="stage">
@@ -20,7 +20,7 @@
         <button id="startBtn">카메라 + 소리 시작</button>
         <button id="soundUnlockBtn">소리 테스트</button>
         <button id="settingsBtn">셋업</button>
-        <button id="privacyBtn">개인정보 안내</button>
+        <button id="privacyBtn">개인정보 및 사용방법 안내</button>
       </div>
 
       <div class="miniHelp">
@@ -154,7 +154,7 @@
       <div class="section">
         <h3>검지 보정</h3>
         <p class="description">
-          각 손마다 "완전히 접은 검지"와 "완전히 편 검지"를 직접 저장합니다.
+          각 손마다 "완전히 편 검지"와 "완전히 접은 검지"를 직접 저장합니다.
           버튼을 누른 뒤 약 0.8초 동안 그 자세를 유지하세요.
         </p>
 
@@ -163,12 +163,12 @@
             <div class="calTitle">왼쪽 손</div>
             <div class="calLive">현재 원시값: <b id="leftRawValue">--</b></div>
             <div class="calButtons">
-              <button id="leftClosedCalBtn">완전히 접힘 저장</button>
               <button id="leftOpenCalBtn">완전히 펴짐 저장</button>
+              <button id="leftClosedCalBtn">완전히 접힘 저장</button>
             </div>
             <div class="calSaved">
-              접힘 <span id="leftClosedSaved">--</span> ·
-              펴짐 <span id="leftOpenSaved">--</span>
+              펴짐 <span id="leftOpenSaved">--</span> ·
+              접힘 <span id="leftClosedSaved">--</span>
             </div>
           </div>
 
@@ -176,12 +176,12 @@
             <div class="calTitle">오른쪽 손</div>
             <div class="calLive">현재 원시값: <b id="rightRawValue">--</b></div>
             <div class="calButtons">
-              <button id="rightClosedCalBtn">완전히 접힘 저장</button>
               <button id="rightOpenCalBtn">완전히 펴짐 저장</button>
+              <button id="rightClosedCalBtn">완전히 접힘 저장</button>
             </div>
             <div class="calSaved">
-              접힘 <span id="rightClosedSaved">--</span> ·
-              펴짐 <span id="rightOpenSaved">--</span>
+              펴짐 <span id="rightOpenSaved">--</span> ·
+              접힘 <span id="rightClosedSaved">--</span>
             </div>
           </div>
         </div>
@@ -228,29 +228,198 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=29"></script>
+  <script type="module" src="app.js?v=32"></script>
 
   <div id="privacyModal" class="privacyModal hidden" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
     <div class="privacyCard">
-      <h2 id="privacyTitle">카메라 및 개인정보 안내</h2>
+      <h2 id="privacyTitle">개인정보 및 사용방법 안내</h2>
 
-      <p>
-        이 사이트는 손 동작 인식을 위해 카메라를 사용합니다.
-      </p>
+      <section class="guideSection">
+        <h3>카메라 및 개인정보 안내</h3>
+        <p>
+          이 사이트는 손 동작 인식을 위해 카메라를 사용합니다.
+        </p>
 
-      <ul>
-        <li>카메라 영상은 사용자의 기기에서 실시간으로 처리됩니다.</li>
-        <li>영상이나 사진은 녹화·저장되지 않습니다.</li>
-        <li>카메라 영상이나 사진은 사이트 관리자에게 전송되지 않습니다.</li>
-        <li>사이트 관리자도 사용자의 카메라 화면을 확인할 수 없습니다.</li>
-      </ul>
+        <ul>
+          <li>카메라 영상은 사용자의 기기에서 실시간으로 처리됩니다.</li>
+          <li>영상이나 사진은 녹화·저장되지 않습니다.</li>
+          <li>카메라 영상이나 사진은 사이트 관리자에게 전송되지 않습니다.</li>
+          <li>사이트 관리자도 사용자의 카메라 화면을 확인할 수 없습니다.</li>
+        </ul>
 
-      <p class="privacySmall">
-        카메라는 손의 위치와 동작을 인식하는 용도로만 사용됩니다.
-        사이트 실행에 필요한 프로그램 파일과 손 인식 모델은 인터넷을 통해 불러올 수 있습니다.
-      </p>
+        <p class="privacySmall">
+          카메라는 손의 위치와 동작을 인식하는 용도로만 사용됩니다.
+          사이트 실행에 필요한 프로그램 파일과 손 인식 모델은 인터넷을 통해 불러올 수 있습니다.
+        </p>
+      </section>
 
-      <button id="privacyOkBtn" class="privacyOkBtn">확인</button>
+      <section class="guideSection">
+        <h3>사용방법</h3>
+
+        <div class="guideStep">
+          <strong>1. 카메라와 소리 시작</strong>
+          <p>
+            왼쪽 위의 <b>카메라 + 소리 시작</b> 버튼을 누르고 카메라 사용을 허용합니다.
+            모바일에서는 소리가 작게 들릴 수 있으므로 기기 음량도 확인하세요.
+          </p>
+        </div>
+
+        <div class="guideStep">
+          <strong>2. 이 사이트에서 말하는 '검지를 편 상태'</strong>
+          <p>
+            검지 손가락을 손바닥에서 앞으로 <b>가능한 곧게 펴는 자세</b>입니다.
+            다른 손가락은 펴거나 접어도 상관없으며, 검지의 상태를 중심으로 판단합니다.
+            검지가 충분히 펴진 상태에서 코드원 위의 원하는 영역을 가리키면 코드가 선택됩니다.
+          </p>
+        </div>
+
+        <div class="guideStep">
+          <strong>3. 이 사이트에서 말하는 '검지를 접은 상태'</strong>
+          <p>
+            검지를 손바닥 쪽으로 <b>충분히 구부린 자세</b>입니다.
+            주먹을 완전히 쥐어도 되고 검지만 접어도 됩니다.
+            검지를 접으면 현재 선택이 해제되고 해당 손의 소리가 멈춥니다.
+          </p>
+        </div>
+
+        <div class="guideStep">
+          <strong>4. 코드 선택과 정지</strong>
+          <p>
+            검지를 편 채 코드원의 원하는 칸을 가리켜 선택합니다.
+            검지를 접거나, 손가락이 코드원 영역 밖으로 벗어나면 해당 손의 소리가 자동으로 멈춥니다.
+          </p>
+        </div>
+
+        <div class="guideStep">
+          <strong>5. 기본 모드</strong>
+          <p>
+            한쪽 코드원에서 근음(C, D, E, F, G, A, B)을 고르고
+            다른 코드원에서 maj, m, 7, m7 등의 코드 타입을 고릅니다.
+            두 선택이 조합되어 하나의 코드가 연주됩니다.
+          </p>
+        </div>
+
+        <div class="guideStep">
+          <strong>6. 사용자 코드 모드</strong>
+          <p>
+            셋업에서 원하는 코드 이름을 직접 입력해 코드원에 배치할 수 있습니다.
+            이 모드에서는 왼손과 오른손이 각각 독립적으로 동작하므로
+            서로 다른 두 코드를 동시에 연주할 수도 있습니다.
+          </p>
+        </div>
+      </section>
+
+      <section class="guideSection">
+        <h3>셋업 사용방법</h3>
+
+        <div class="guideSetting">
+          <strong>모드</strong>
+          <p>
+            <b>기본 모드 - 양손</b>은 근음 + 코드 타입을 조합하는 방식입니다.
+            <b>사용자 코드 모드</b>는 원하는 코드 이름을 직접 등록하는 방식입니다.
+          </p>
+        </div>
+
+        <div class="guideSetting">
+          <strong>카메라</strong>
+          <p>
+            모바일에서는 전면/후면 카메라를 선택할 수 있습니다.
+            저장하면 선택한 카메라로 다시 시작됩니다.
+          </p>
+        </div>
+
+        <div class="guideSetting">
+          <strong>손 인식 엔진 / 성능 모드</strong>
+          <p>
+            손이 잘 인식되지 않으면 <b>CPU - 호환성</b>을 권장합니다.
+            화면 반응이 느리면 <b>프레임 우선</b>을 사용해 보세요.
+            GPU가 빠르더라도 일부 기기에서는 손 검출이 되지 않을 수 있습니다.
+          </p>
+        </div>
+
+        <div class="guideSetting emphasisSetting">
+          <strong>검지 보정 — 처음 사용할 때 권장</strong>
+          <p>
+            사람마다 손 모양과 카메라 각도가 달라서
+            <b>왼손과 오른손을 각각 따로 보정</b>하면 검지 펴기/접기 판정이 훨씬 안정적입니다.
+          </p>
+
+          <ol class="calGuide">
+            <li>
+              카메라에 해당 손을 잘 보이게 한 뒤 검지를 가능한 곧게 폅니다.
+            </li>
+            <li>
+              그 자세를 유지하면서 해당 손의 <b>완전히 펴짐 저장</b>을 누르고
+              약 <b>0.8초</b> 동안 그대로 유지합니다.
+            </li>
+            <li>
+              이번에는 검지를 손바닥 쪽으로 최대한 접습니다.
+            </li>
+            <li>
+              <b>완전히 접힘 저장</b>을 누르고 약 <b>0.8초</b> 동안 그대로 유지합니다.
+            </li>
+            <li>
+              왼손과 오른손을 각각 같은 방법으로 보정한 뒤 맨 아래의 <b>저장</b>을 누릅니다.
+            </li>
+          </ol>
+
+          <p class="guideTip">
+            '현재 원시값'은 참고용 숫자입니다. 숫자를 직접 맞출 필요 없이
+            실제로 가장 접은 자세와 가장 편 자세를 저장하면 됩니다.
+          </p>
+        </div>
+
+        <div class="guideSetting">
+          <strong>기본 모드의 코드 타입</strong>
+          <p>
+            오른쪽 코드원에 넣을 코드 타입과 개수를 바꿀 수 있습니다.
+            예: maj, m, 7, maj7, m7, 6, m6, 9, add9, 7sus4 등.
+          </p>
+        </div>
+
+        <div class="guideSetting">
+          <strong>사용자 코드 모드의 코드 입력</strong>
+          <p>
+            코드원 칸 수를 정한 뒤 각 칸에 원하는 코드를 입력합니다.
+            예: Cadd9, A9, E6, CmMaj7, F#m7b5, G7b9, C6/9, C/E 등.
+          </p>
+        </div>
+
+        <div class="guideSetting">
+          <strong>음량</strong>
+          <p>
+            사이트에서 출력하는 신디 음량을 조절합니다.
+            기기 자체의 미디어 음량과 별개이므로 둘 다 확인해야 합니다.
+          </p>
+        </div>
+
+        <div class="guideSetting">
+          <strong>모바일 스피커 보강</strong>
+          <p>
+            휴대폰 스피커에서 낮은 음이 너무 작게 들릴 때 사용합니다.
+            값을 높이면 한 옥타브 위 성분이 더 섞여 코드가 더 잘 들리지만,
+            너무 높이면 음색이 밝아질 수 있습니다.
+          </p>
+        </div>
+
+        <div class="guideSetting">
+          <strong>신디 음색</strong>
+          <p>
+            <b>따뜻함 ↔ 밝음</b> 사이에서 소리의 성향을 조절합니다.
+            코드나 손 인식 방식에는 영향을 주지 않습니다.
+          </p>
+        </div>
+
+        <div class="guideSetting">
+          <strong>설정을 바꾼 뒤</strong>
+          <p>
+            반드시 셋업의 <b>저장</b> 버튼을 눌러 적용하세요.
+            모바일에서는 위쪽에도 저장 버튼이 있어 화면 아래가 가려져도 저장할 수 있습니다.
+          </p>
+        </div>
+      </section>
+
+      <button id="privacyOkBtn" class="privacyOkBtn">확인하고 시작</button>
     </div>
   </div>
 

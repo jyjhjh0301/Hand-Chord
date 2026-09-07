@@ -2207,7 +2207,7 @@ startBtn.addEventListener("click",()=>{
 });
 
 
-const PRIVACY_NOTICE_KEY = "handChordPrivacyNoticeV1";
+const PRIVACY_NOTICE_KEY = "handChordPrivacyAndGuideV3";
 
 function openPrivacyNotice() {
   privacyModal.classList.remove("hidden");

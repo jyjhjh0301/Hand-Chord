@@ -953,3 +953,137 @@ video {
     min-height: 48px;
   }
 }
+
+
+/* =========================================================
+   v30 - Privacy + Usage Guide
+   ========================================================= */
+
+.guideSection + .guideSection {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,.12);
+}
+
+.guideSection h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+
+.guideStep {
+  margin-top: 12px;
+  padding: 10px 12px;
+
+  background: rgba(255,255,255,.055);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+}
+
+.guideStep strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.guideStep p {
+  margin: 0 !important;
+  font-size: 13px;
+  line-height: 1.48;
+  opacity: .88;
+}
+
+@media (max-width: 700px) {
+  .privacyCard {
+    padding-bottom: calc(22px + var(--safe-bottom));
+  }
+
+  .guideSection h3 {
+    font-size: 16px;
+  }
+
+  .guideStep {
+    padding: 9px 10px;
+  }
+
+  .guideStep strong {
+    font-size: 13px;
+  }
+
+  .guideStep p {
+    font-size: 12.5px;
+  }
+}
+
+
+/* =========================================================
+   v31 - detailed setup guide
+   ========================================================= */
+
+.guideSetting {
+  margin-top: 10px;
+  padding: 11px 12px;
+
+  background: rgba(255,255,255,.04);
+  border-left: 3px solid rgba(255,255,255,.18);
+  border-radius: 8px;
+}
+
+.guideSetting strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.guideSetting p {
+  margin: 0 !important;
+  font-size: 13px;
+  line-height: 1.52;
+  opacity: .88;
+}
+
+.emphasisSetting {
+  background: rgba(255,255,255,.075);
+  border: 1px solid rgba(255,255,255,.12);
+  border-left-width: 3px;
+}
+
+.calGuide {
+  margin: 10px 0 8px;
+  padding-left: 22px;
+}
+
+.calGuide li {
+  margin: 7px 0;
+  font-size: 13px;
+  line-height: 1.48;
+  opacity: .9;
+}
+
+.guideTip {
+  margin-top: 9px !important;
+  padding: 8px 10px;
+
+  font-size: 12px !important;
+
+  background: rgba(255,255,255,.055);
+  border-radius: 8px;
+}
+
+@media (max-width: 700px) {
+  .guideSetting {
+    padding: 9px 10px;
+  }
+
+  .guideSetting strong {
+    font-size: 13px;
+  }
+
+  .guideSetting p,
+  .calGuide li {
+    font-size: 12.5px;
+  }
+
+  .guideTip {
+    font-size: 12px !important;
+  }
+}
