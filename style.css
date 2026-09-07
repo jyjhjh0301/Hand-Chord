@@ -664,107 +664,115 @@ button, select, input {
 
 
 /* =========================================================
-   v25 - top-left control HUD: wider and flatter
-   "소리 테스트 / 셋업"이 있는 박스를 가로형으로 변경
-   PC / 모바일 공통
+   v26 - HUD ONLY
+   왼쪽 위 "소리 테스트 / 셋업" 박스만 가로로 납작하게.
+   카메라 / 코드원 / 설정창 / JS 동작은 전혀 건드리지 않음.
    ========================================================= */
 
 .hud {
-  width: 390px !important;
-  max-width: calc(100vw - 28px);
+  width: 520px !important;
+  max-width: calc(100vw - 24px) !important;
 
   padding: 8px 10px !important;
 
-  display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  grid-template-rows: auto auto auto auto;
-  column-gap: 10px;
-  row-gap: 1px;
+  display: grid !important;
+  grid-template-columns: 62px minmax(120px, 1fr) auto !important;
+  grid-template-rows: auto auto auto !important;
+  grid-template-areas:
+    "chord status buttons"
+    "chord engine buttons"
+    "help  help   help" !important;
 
-  align-items: center;
+  column-gap: 10px !important;
+  row-gap: 1px !important;
+  align-items: center !important;
 }
 
 .hud #currentChord {
-  grid-column: 1;
-  grid-row: 1 / span 2;
+  grid-area: chord !important;
 
   margin: 0 !important;
   min-height: 0 !important;
 
-  font-size: 24px !important;
+  font-size: 26px !important;
   line-height: 1 !important;
 
-  align-self: center;
-  overflow: hidden;
   white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .hud #status {
-  grid-column: 2;
-  grid-row: 1;
+  grid-area: status !important;
 
   margin: 0 !important;
   min-height: 0 !important;
 
   font-size: 11px !important;
-  line-height: 1.2;
+  line-height: 1.15 !important;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hud .engineStatus {
-  grid-column: 2;
-  grid-row: 2;
+  grid-area: engine !important;
 
   margin: 1px 0 0 !important;
   min-height: 0 !important;
 
   font-size: 9px !important;
-  line-height: 1.15;
+  line-height: 1.1 !important;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hud .buttonRow {
-  grid-column: 1 / -1;
-  grid-row: 3;
+  grid-area: buttons !important;
 
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
 
   gap: 5px !important;
-  margin-top: 5px !important;
+  margin: 0 !important;
 }
 
 .hud .buttonRow button {
+  min-height: 32px !important;
   padding: 6px 9px !important;
-  min-height: 32px;
 
-  font-size: 12px !important;
-  line-height: 1.1;
+  font-size: 11px !important;
+  line-height: 1 !important;
 
-  white-space: nowrap;
+  white-space: nowrap !important;
 }
 
 .hud .miniHelp {
-  grid-column: 1 / -1;
-  grid-row: 4;
+  grid-area: help !important;
 
-  margin-top: 3px !important;
+  margin: 3px 0 0 !important;
 
-  font-size: 10px !important;
-  line-height: 1.15;
+  font-size: 9px !important;
+  line-height: 1.05 !important;
+
+  opacity: .66;
 }
 
-/* 모바일도 같은 가로형 구조를 유지하되 화면 폭을 넘지 않게 */
+/* 모바일에서도 같은 구조. 폭만 화면에 맞게 더 압축 */
 @media (max-width: 700px) {
   .hud {
-    width: 330px !important;
-    max-width: calc(100vw - 20px);
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
 
-    grid-template-columns: 58px minmax(0, 1fr);
-    column-gap: 8px;
+    grid-template-columns: 46px minmax(80px, 1fr) auto !important;
 
-    padding: 7px 9px !important;
-    border-radius: 12px !important;
+    column-gap: 7px !important;
+
+    padding: 7px 8px !important;
   }
 
   .hud #currentChord {
@@ -772,29 +780,11 @@ button, select, input {
   }
 
   .hud #status {
-    font-size: 10px !important;
+    font-size: 9.5px !important;
   }
 
   .hud .engineStatus {
-    font-size: 8.5px !important;
-  }
-
-  .hud .buttonRow button {
-    padding: 6px 8px !important;
-    min-height: 31px;
-    font-size: 11px !important;
-  }
-
-  .hud .miniHelp {
-    font-size: 9.5px !important;
-  }
-}
-
-/* 아주 좁은 폰에서도 버튼이 두 줄로 떨어지지 않도록 조금 더 압축 */
-@media (max-width: 380px) {
-  .hud {
-    width: calc(100vw - 18px) !important;
-    grid-template-columns: 52px minmax(0, 1fr);
+    font-size: 8px !important;
   }
 
   .hud .buttonRow {
@@ -802,8 +792,26 @@ button, select, input {
   }
 
   .hud .buttonRow button {
-    padding-left: 6px !important;
-    padding-right: 6px !important;
-    font-size: 10.5px !important;
+    min-height: 29px !important;
+    padding: 5px 7px !important;
+    font-size: 10px !important;
+  }
+
+  .hud .miniHelp {
+    font-size: 8.5px !important;
+  }
+}
+
+/* 아주 좁은 화면에서는 시작 버튼 글자만 조금 더 압축 */
+@media (max-width: 390px) {
+  .hud {
+    grid-template-columns: 40px minmax(60px, 1fr) auto !important;
+    column-gap: 5px !important;
+  }
+
+  .hud .buttonRow button {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    font-size: 9px !important;
   }
 }
