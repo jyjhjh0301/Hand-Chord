@@ -841,3 +841,9 @@ button, select, input {
     display: none !important;
   }
 }
+
+
+/* v28: PC와 모바일 모두 카메라를 화면에 꽉 채움 */
+video {
+  object-fit: cover !important;
+}

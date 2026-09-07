@@ -935,11 +935,10 @@ function isMirroredCamera() {
 function applyCameraMirror() {
   video.style.transform = isMirroredCamera() ? "scaleX(-1)" : "none";
 
-  // PC에서는 전체 화각을 보이도록 contain:
-  // 확대/크롭 없이 카메라 전체 프레임을 표시한다.
-  //
-  // 모바일에서는 화면을 꽉 채우는 cover를 유지한다.
-  video.style.objectFit = isMobileDevice() ? "cover" : "contain";
+  // PC / 모바일 모두 화면을 꽉 채운다.
+  // 브라우저 화면비와 카메라 화면비가 다르면 가장자리 일부는 crop될 수 있지만,
+  // 검은 여백 없이 카메라가 전체 화면을 채운다.
+  video.style.objectFit = "cover";
 }
 
 function getDisplayedVideoRect() {
@@ -952,7 +951,8 @@ function getDisplayedVideoRect() {
   const videoAspect = sourceW / Math.max(1, sourceH);
   const stageAspect = stageW / Math.max(1, stageH);
 
-  const fit = isMobileDevice() ? "cover" : "contain";
+  // 실제 video 표시 방식과 동일하게 항상 cover 기준으로 손 좌표를 보정한다.
+  const fit = "cover";
 
   let width, height, left, top;
 
