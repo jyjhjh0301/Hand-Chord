@@ -915,11 +915,69 @@ function isMirroredCamera() {
 
 function applyCameraMirror() {
   video.style.transform = isMirroredCamera() ? "scaleX(-1)" : "none";
+
+  // PC에서는 전체 화각을 보이도록 contain:
+  // 확대/크롭 없이 카메라 전체 프레임을 표시한다.
+  //
+  // 모바일에서는 화면을 꽉 채우는 cover를 유지한다.
+  video.style.objectFit = isMobileDevice() ? "cover" : "contain";
+}
+
+function getDisplayedVideoRect() {
+  const stageW = canvas.width;
+  const stageH = canvas.height;
+
+  const sourceW = video.videoWidth || stageW;
+  const sourceH = video.videoHeight || stageH;
+
+  const videoAspect = sourceW / Math.max(1, sourceH);
+  const stageAspect = stageW / Math.max(1, stageH);
+
+  const fit = isMobileDevice() ? "cover" : "contain";
+
+  let width, height, left, top;
+
+  if (fit === "contain") {
+    if (videoAspect > stageAspect) {
+      width = stageW;
+      height = width / videoAspect;
+      left = 0;
+      top = (stageH - height) / 2;
+    } else {
+      height = stageH;
+      width = height * videoAspect;
+      top = 0;
+      left = (stageW - width) / 2;
+    }
+  } else {
+    // object-fit: cover
+    if (videoAspect > stageAspect) {
+      height = stageH;
+      width = height * videoAspect;
+      top = 0;
+      left = (stageW - width) / 2;
+    } else {
+      width = stageW;
+      height = width / videoAspect;
+      left = 0;
+      top = (stageH - height) / 2;
+    }
+  }
+
+  return { left, top, width, height };
 }
 
 function toScreenPoint(lm) {
-  const x = isMirroredCamera() ? (1-lm.x) : lm.x;
-  return { x:x*canvas.width, y:lm.y*canvas.height };
+  const r = getDisplayedVideoRect();
+
+  const normalizedX = isMirroredCamera()
+    ? (1 - lm.x)
+    : lm.x;
+
+  return {
+    x: r.left + normalizedX * r.width,
+    y: r.top + lm.y * r.height
+  };
 }
 
 function wheelGeom(kind) {
@@ -930,16 +988,16 @@ function wheelGeom(kind) {
 
   if (settings.mode === "basic") {
     if (portrait) {
-      // 세로형 스마트폰:
-      // 아래쪽 코드를 고를 때 손이 화면 밖으로 빠지지 않도록
-      // 두 원 전체를 확실히 위로 올림.
+      // 모바일 세로:
+      // 기존 v19보다 원 두 개를 화면 높이의 약 8% 더 위로 이동.
+      // 아래쪽 코드를 만질 때 손 전체가 화면 안에 더 많이 남도록 한다.
       const outer = Math.min(w * 0.34, h * 0.18);
       const inner = outer * 0.27;
 
       if (kind === "left") {
         return {
           cx: w * 0.50,
-          cy: h * 0.28,
+          cy: h * 0.20,
           outer,
           inner
         };
@@ -947,39 +1005,40 @@ function wheelGeom(kind) {
 
       return {
         cx: w * 0.50,
-        cy: h * 0.56,
+        cy: h * 0.48,
         outer,
         inner
       };
     }
 
-    // PC / 가로형 폰도 약간 더 위로
+    // PC / 가로 화면:
+    // 이전 48% 높이 -> 40% 높이로 올려 눈에 띄게 이동.
     const outer = minSide * 0.22;
     const inner = minSide * 0.058;
 
     if (kind==="left") return {
-      cx:w*0.30, cy:h*0.48,
+      cx:w*0.30, cy:h*0.40,
       outer, inner
     };
 
     return {
-      cx:w*0.70, cy:h*0.48,
+      cx:w*0.70, cy:h*0.40,
       outer, inner
     };
   }
 
-  // 사용자 코드 모드도 더 위로 이동
+  // 사용자 코드 모드
   if (portrait) {
     const outer = Math.min(w * 0.39, h * 0.22);
     return {
-      cx:w*0.50, cy:h*0.44,
+      cx:w*0.50, cy:h*0.34,
       outer,
       inner:outer*0.24
     };
   }
 
   return {
-    cx:w*0.50, cy:h*0.48,
+    cx:w*0.50, cy:h*0.40,
     outer:minSide*0.27, inner:minSide*0.065
   };
 }

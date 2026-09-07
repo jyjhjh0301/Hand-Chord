@@ -16,7 +16,7 @@ html, body {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transform: scaleX(-1);
   background: #111;
 }
@@ -413,4 +413,73 @@ button, select, input {
 
 .boostRow {
   margin-top: 12px;
+}
+
+
+/* =========================================================
+   v22 - Mobile portrait settings panel fix
+   모바일 브라우저 주소창/하단바 때문에 100vh가 실제 보이는 높이와
+   달라지는 문제를 피하고, 저장 버튼이 항상 닿도록 수정.
+   ========================================================= */
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .panel {
+    /* 가운데 정렬 대신 실제 보이는 화면 안에 위/아래 여유를 둠 */
+    position: fixed;
+    top: calc(10px + var(--safe-top));
+    bottom: calc(10px + var(--safe-bottom));
+    left: 10px;
+    right: 10px;
+
+    transform: none;
+    width: auto;
+
+    /* 100dvh 지원 브라우저에서는 주소창까지 반영한 실제 viewport 사용 */
+    height: auto;
+    max-height: calc(
+      100dvh - 20px - var(--safe-top) - var(--safe-bottom)
+    );
+
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+
+    /* 맨 아래까지 스크롤했을 때 버튼 아래에 충분한 여유 */
+    padding: 16px 16px calc(110px + var(--safe-bottom));
+
+    border-radius: 14px;
+  }
+
+  /* 구형 모바일 브라우저용 100vh fallback */
+  @supports not (height: 100dvh) {
+    .panel {
+      max-height: calc(
+        100vh - 20px - var(--safe-top) - var(--safe-bottom)
+      );
+    }
+  }
+
+  /* 저장/기본값 버튼을 패널 아래에 붙여둬서
+     설정이 길어도 저장 버튼을 놓치지 않게 함 */
+  .panelButtons {
+    position: sticky;
+    bottom: calc(-94px - var(--safe-bottom));
+    z-index: 5;
+
+    margin: 18px -16px calc(-94px - var(--safe-bottom));
+    padding: 14px 16px calc(16px + var(--safe-bottom));
+
+    background:
+      linear-gradient(
+        to bottom,
+        rgba(18,18,18,0),
+        rgba(18,18,18,.98) 28px,
+        rgba(18,18,18,.98)
+      );
+  }
+
+  .panelButtons button {
+    min-height: 44px;
+  }
 }
